@@ -1,0 +1,20 @@
+# Research the topic and produce a factual summary for a short-form video.
+
+Topic: {topic}
+Language: {language}
+
+Rules:
+- Only state facts that can be established from reliable sources.
+- Every fact you mark "VERIFIED" MUST name the source it comes from: a named
+  institution, agency, journal, study, archive, or official record (e.g.
+  "NASA Solar System Exploration", "Planck Collaboration 2018 results VI",
+  "U.S. Senate Church Committee Final Report, 1976"). A claim resting only on
+  your own general knowledge, on "various sources", or on nothing at all is
+  NOT verified — mark it "UNVERIFIED" and leave "source" empty.
+- If a claim cannot be verified, mark status "UNVERIFIED". Never invent facts,
+  and never invent a source to justify one.
+- Output STRICT JSON: {{"topic": str, "summary": str,
+  "facts": [{{"claim": str, "status": "VERIFIED"|"UNVERIFIED", "source": str}}],
+  "sources": [str], "confidence": float 0-1}}
+
+Return only the JSON object.

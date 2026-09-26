@@ -1,0 +1,47 @@
+# Split this script into scene-by-scene narration for a 9:16 vertical short.
+# You are SLICING the script, not summarizing it: the scenes together must
+# contain the ENTIRE script word-for-word.
+
+Script hook: {hook}
+Script body: {body}
+Script cta: {cta}
+Total duration: {duration} seconds
+Language: {language}
+Number of scenes: {scene_count}
+Fixed duration per scene: {max_scene_duration} seconds
+
+Rules:
+- Split "body" into exactly {scene_count} consecutive chunks, in order. Every sentence of the
+  body must appear exactly once across the scenes. Do NOT shorten,
+  summarize, paraphrase or drop anything.
+- The hook opens scene 1; the cta is the final scene.
+- Each scene's duration is EXACTLY {max_scene_duration} seconds — not less, not more.
+  Write narration long enough to fill {max_scene_duration} seconds at a natural speaking pace.
+  At ~2.5 words/second, that's roughly {max_scene_duration_scene_words} words per scene.
+  Make narration SUBSTANTIAL — write at least {max_scene_duration_scene_words} words per scene.
+- visual_prompt: DETAILED image/video-generation prompt for a cinematographer. MUST be UNIQUE per scene — NEVER repeat the same subject, setting, or composition across scenes. Include ALL of:
+  * Camera angle & movement (e.g. "low-angle tracking shot", "top-down aerial", "close-up macro")
+  * Subject: EXACT what is shown, describe in detail (pose, expression, clothing, position) — pick a DIFFERENT subject per scene
+  * Setting & environment (e.g. "sunlit forest floor with dew-covered leaves", "dark underwater cave with bioluminescent glow") — pick a DIFFERENT location per scene
+  * Lighting (e.g. "warm golden hour backlighting", "harsh overhead fluorescent", "soft diffused overcast")
+  * Mood & atmosphere (e.g. "mysterious and tense", "bright and cheerful", "dramatic and awe-inspiring")
+  * Style (e.g. "cinematic 3D CGI render", "photorealistic documentary footage", "hyper-detailed macro photography")
+  * Aspect ratio: vertical 9:16 (1080x1920) unless project is 16:9
+  * NO text, NO watermarks, NO subtitles in the image
+  Minimum 25 words per visual_prompt. NEVER write a one-liner. Each scene MUST show a completely different visual — different people, different places, different angles.
+- stock_query: REQUIRED for EVERY scene. 2-4 words naming ONLY the concrete
+  subject for real-footage search (e.g. "fennec fox", "camel desert",
+  "kangaroo rat", "laboratory microscope", "surfer wave", "pottery wheel").
+  No adjectives like "majestic/adorable", no scene directions. The footage
+  must literally show this subject — if narration names an animal, the
+  query MUST name that same animal. For abstract topics (space, science,
+  motivation), use the closest real-world visual equivalent (e.g. "galaxy
+  stars", "chemistry lab", "sunrise mountain"). NEVER leave stock_query empty.
+- motion_prompt: zoom-in, zoom-out, pan-left, pan-right, up, down
+- asset_type: "image" (all scenes use stills + motion for this build)
+
+Output STRICT JSON: {"scenes": [{"scene_number": int, "duration": float,
+"narration": str, "visual_prompt": str, "stock_query": str,
+"motion_prompt": str, "text_overlay": str, "asset_type": "image"}]}
+
+Return only the JSON object.

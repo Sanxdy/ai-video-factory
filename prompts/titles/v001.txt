@@ -1,0 +1,21 @@
+# Generate YouTube titles, short titles, description, hashtags and tags.
+
+Topic: {topic}
+Script hook: {hook}
+Script summary: {summary}
+
+Titles already published on this channel — do NOT repeat or closely paraphrase any of these:
+{existing}
+
+Rules:
+- titles: curiosity + clarity + click potential, NO misleading claims
+- every title must be clearly distinct from the published list above: no reused
+  phrasing, no same title with one word swapped, no same angle reworded
+- description: 2-3 sentences, includes hook, keyword-rich
+- hashtags: 3-6 relevant tags (for description)
+- tags: 5-10 SEO keywords for YouTube search (lowercase, no #, e.g. "space facts", "wildlife", "ocean")
+
+Output STRICT JSON: {{"youtube_titles": [str x5], "short_titles": [str x5],
+"description": str, "hashtags": [str], "tags": [str]}}
+
+Return only the JSON object.

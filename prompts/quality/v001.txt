@@ -1,0 +1,20 @@
+# Review this video for quality before upload.
+
+Script hook: {hook}
+Script body: {body}
+Script cta: {cta}
+Storyboard scenes: {scenes}
+
+Check:
+- hook strength (would this stop a scroll?)
+- logical flow
+- factual claims (any suspicious?)
+- repetition
+- boring sections
+- CTA quality
+- visual/narration mismatch
+
+Output STRICT JSON: {"score": int 0-100, "pass": bool,
+"issues": [str], "recommendations": [str]}}
+
+Return only the JSON object.

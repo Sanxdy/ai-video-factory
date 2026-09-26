@@ -1,0 +1,79 @@
+# Write ONE section of a long-form YouTube countdown video.
+# The video is a ranked countdown: viewers stay because they are waiting for
+# number one. You are writing only the section named below.
+
+Video topic: {topic}
+Section to write: {section} (section {index} of {total})
+Ranking: {rank_note}
+Target length for THIS section: {words} spoken words — land within 10% of
+that number. Well under makes the finished video too short; well over makes
+it too long. Both miss.
+Language: {language}
+Verified facts you may use: {facts}
+Recent calls-to-action from this channel (match this voice): {cta_examples}
+Sections already written (do NOT repeat their content): {written}
+
+Rules:
+- Write ONLY this section. Never write the other sections.
+- Hit the word target above within 10%. Do not stop early, and do not pad
+  the section out — a section well under OR well over the target is a failed
+  section. If you are short, add one concrete detail, number or example; if
+  you are long, cut the weakest example.
+- "narration" is spoken aloud. No abbreviations, no parentheses, no emojis,
+  no markdown, no headings inside narration.
+- Keep sentences SHORT: aim for 8 to 14 words each, and break longer ideas
+  into separate sentences. The video changes picture every few seconds and a
+  scene can only end where a sentence or clause ends, so long sentences make
+  the edit choppy.
+- Open each ITEM with something concrete and specific — a number, a place, a
+  measurement, a date. Never open an item with "In this video", "Welcome",
+  "Imagine" or "Have you ever". (The intro has its own hook rule below.)
+- Explain WHY the thing is extreme. Give the measurement or the mechanism,
+  never just the superlative. "Hottest place on Earth" is weak; "the ground
+  here reaches 70 degrees Celsius, hot enough to melt a plastic bottle" is
+  the standard to hit.
+- If this is an item section, state its rank in the FIRST sentence using the
+  number given in "Ranking" above ("Number four, ..."). Viewers must always
+  hear where they are in the countdown. Never use a different number.
+- If this is an item section, end with ONE sentence that sets up the next
+  item, so the viewer keeps watching.
+- RANKING ESCALATION: items must escalate along whatever the topic measures.
+  If the topic is "impossible to reach", item number one must be the hardest
+  to physically or legally reach. If the topic is "most dangerous", number
+  one must be the most dangerous. The viewer stays because they believe the
+  next item tops the last one — if number one is the least extreme, the
+  payoff fails and the viewer feels cheated.
+- Do not place the most culturally FAMOUS item at number one unless it is
+  also the most extreme by the topic's measure. Familiarity is not the same
+  as extremity. A well-known place that is merely restricted, while other
+  items on the list require submarines or climbing, is a weak payoff.
+- VARY DESCRIPTION PATTERNS: if you used a specific structure for an earlier
+  item (e.g. "no X, no Y, no Z"), rephrase it for later items. Repeating
+  the same three-beat pattern word-for-word across items makes the narration
+  feel templated.
+- If this is the intro, it is the HOOK — not a summary of the video. Write it
+  in three beats:
+  (1) HOOK: address the viewer directly and open a gap they want closed. Ask
+      one specific question, or state one surprising concrete fact, about the
+      topic. "Do you know there is a place 2,688 kilometres from the nearest
+      land?" works because the number is real; a vague "Have you ever wondered
+      about the unknown?" does not.
+  (2) PROMISE: say exactly how many items there are, exactly as "Ranking"
+      states, and tease that number one is the most extreme of all — make the
+      viewer wait for it. Do NOT reveal what number one is.
+  (3) HAND-OFF: end the intro with ONE short, COMPLETE sentence that starts
+      the countdown and names the first rank — for example "Let's start with
+      number six." Do not end mid-sentence (never "Number six is ..."), and do
+      not name the first item; the next section names it.
+  Never list or explain the items in the intro.
+- If this is the outro, do not re-explain the items. One sentence on the most
+  surprising thing, then close with a direct question to the viewer in the
+  same voice as the calls-to-action above, and invite them to subscribe. The
+  question is what drives comments — a plain "thanks for watching" is a
+  failed outro.
+
+Output STRICT JSON: {"heading": str, "narration": str}
+"heading" is a 2-6 word chapter label (for an item, name the place, e.g.
+"Danakil Depression, Ethiopia"). Use "" for the intro and outro.
+
+Return only the JSON object.

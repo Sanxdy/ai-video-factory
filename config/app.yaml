@@ -1,0 +1,58 @@
+project:
+  name: ai-video-factory
+  version: "0.1.0"
+
+paths:
+  content: content
+  database: database/factory.db
+  runtime: runtime
+
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  max_duration_seconds: 60
+
+generation:
+  max_concurrent_jobs: 1
+  max_video_generation_seconds: 8
+  use_video_generation: false        # VPS proof: video gen off; Mac: true
+  fallback_to_image_motion: true
+
+quality:
+  min_resolution: "1080x1920"
+  max_duration: 75
+  min_duration: 15
+  reject_missing_audio: true
+  reject_missing_subtitles: true
+
+cost:
+  cloud_api_allowed: false
+  paid_api_allowed: false
+  max_monthly_cost_usd: 0
+
+resources:
+  max_heavy_jobs: 1
+  max_parallel_tts: 1
+  max_parallel_video: 1
+  max_parallel_image: 1
+
+approval:
+  required_before_upload: true
+
+tts:
+  provider: kokoro
+  voice: af_heart
+  speed: 1.0
+
+audio:
+  narration_db: 0
+  voice_volume: 80
+  music_volume: 40
+  sfx_db: -12
+
+daemon:
+  enabled: false
+  videos_per_day: 3
+  start_hour: 1
+  end_hour: 7

@@ -1,0 +1,11 @@
+# Generate at least 5 hooks for a short-form video on this topic.
+# Categories: curiosity, shock, question, contradiction, story, unexpected_fact.
+
+Topic: {topic}
+Summary: {summary}
+Language: {language}
+
+Output STRICT JSON: {"hooks": [{"text": str, "type": str, "score": int 0-100}}]}}
+Best hook should max curiosity + emotional impact + visual potential.
+
+Return only the JSON object.

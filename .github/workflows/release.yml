@@ -1,0 +1,67 @@
+name: release
+
+# A tag builds and publishes. A manual run builds and smoke-tests only, so the
+# pipeline can be exercised before the first tag exists.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    # One arm64 Mac assembles all three targets: build.py downloads a prebuilt
+    # interpreter and resolves wheels per target, so nothing is frozen on the
+    # host and Windows/Linux runners are not needed. macos-14 is the arm64
+    # image, which matters because the macOS bundle is the only one of the
+    # three that can execute here — its smoke test is the only real check that
+    # the bundled ffmpeg renders.
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # web/out is gitignored and build.py refuses to run without it, so a stale
+      # bundle shipping the wrong UI is only prevented by building it here.
+      - name: Build the web UI
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble the bundles
+        run: python3 packaging/build.py all
+
+      - name: Smoke-test the macOS bundle
+        # Renders a synthetic Short through the bundled ffmpeg — no API key, no
+        # network. Windows and Linux are cross-built and cannot run on this host.
+        run: |
+          RES=packaging/out/avf-macos-arm64/AVF.app/Contents/Resources
+          AVF_DATA_DIR=$(mktemp -d) "$RES/python/bin/python3" "$RES/smoke.py"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: avf-bundles
+          path: packaging/out/*.zip
+          if-no-files-found: error
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            packaging/out/*.zip

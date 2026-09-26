@@ -1,0 +1,62 @@
+# Model capability registry (spec §3, §29).
+# status: primary | fallback | disabled — selected by hardware detector.
+models:
+  # ── Image (ComfyUI) ──────────────────────────────────
+  - name: sd-turbo
+    task: image
+    backend: comfyui
+    ram_requirement_gb: 3.0
+    disk_requirement_gb: 4.0
+    supported_resolutions: ["512x512", "576x1024", "768x768"]
+    quantization: fp16
+    apple_silicon: true
+    commercial_license: true
+    install_method: "comfyui model download"
+    status: primary
+  - name: sdxl-base
+    task: image
+    backend: comfyui
+    ram_requirement_gb: 6.0
+    disk_requirement_gb: 7.0
+    supported_resolutions: ["1024x1024", "1080x1920"]
+    quantization: fp16
+    apple_silicon: true
+    commercial_license: true
+    install_method: "comfyui model download"
+    status: fallback
+
+  # ── TTS ──────────────────────────────────────────────
+  - name: kokoro-82m
+    task: tts
+    backend: kokoro
+    ram_requirement_gb: 0.8
+    disk_requirement_gb: 0.3
+    apple_silicon: true
+    commercial_license: true
+    install_method: "pip install kokoro-onnx"
+    status: primary
+
+  # ── STT ──────────────────────────────────────────────
+  - name: whisper-small
+    task: stt
+    backend: whisper
+    ram_requirement_gb: 1.5
+    disk_requirement_gb: 0.5
+    apple_silicon: true
+    commercial_license: true
+    install_method: "pip install faster-whisper"
+    status: primary
+
+  # ── Video (optional, Mac only) ───────────────────────
+  - name: ltx-video-2b
+    task: video
+    backend: mlx
+    ram_requirement_gb: 12.0
+    disk_requirement_gb: 8.0
+    supported_resolutions: ["512x896", "576x1024"]
+    supported_durations: [3, 4, 5, 8]
+    quantization: q4
+    apple_silicon: true
+    commercial_license: true
+    install_method: "mlx-video"
+    status: disabled   # too heavy for VPS; candidate on Mac

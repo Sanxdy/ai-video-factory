@@ -1,0 +1,33 @@
+# Write the camera description for {count} consecutive scenes of a landscape
+# 16:9 long-form video. The narration is already written and must NOT change —
+# you only describe what the camera shows while that narration plays.
+
+Scenes, in order:
+{listing}
+
+Rules:
+- Return exactly {count} shots, in the same order as the scenes above.
+- visual_prompt: a DETAILED image-search / cinematography description.
+  Every shot MUST be visually different from the others — different subject,
+  different location, different angle. Include:
+  * camera angle and framing (e.g. "high aerial drone shot", "ground-level
+    wide angle", "tight macro close-up")
+  * the EXACT subject shown, described concretely
+  * setting and environment
+  * lighting and time of day
+  * mood and atmosphere
+  * style (e.g. "photorealistic documentary photography")
+  * horizontal 16:9 framing
+  * NO text, NO watermarks, NO subtitles in the image
+  Minimum 20 words. Never write a one-liner.
+- stock_query: REQUIRED. 2-4 words naming ONLY the concrete photographic
+  subject for real-footage search (e.g. "salt flats ethiopia",
+  "lava lake", "desert canyon aerial"). No adjectives like "extreme" or
+  "stunning", no scene directions. If the narration names a place or thing,
+  the query MUST name that same place or thing.
+- motion_prompt: one of zoom-in, zoom-out, pan-left, pan-right, up, down
+
+Output STRICT JSON: {"shots": [{"visual_prompt": str, "stock_query": str,
+"motion_prompt": str}]}
+
+Return only the JSON object.

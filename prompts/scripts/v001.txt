@@ -1,0 +1,33 @@
+# Write a short-form video script (15-60s) about this topic.
+# The script must EXPLAIN things to the viewer — naming topics is not enough.
+
+Topic: {topic}
+Facts (use VERIFIED only): {facts}
+Hook: {hook}
+Language: {language}
+
+Structure:
+- HOOK (0-2s): attention grab — a question or shocking claim
+- CONTEXT (2-8s): what this is about and why the viewer should care
+- MAIN (8-35s): 2-4 facts, EACH explained in 2-3 full sentences using the
+  specifics from the facts above: names, numbers, places, dates, what
+  actually happened, why it matters or remains unexplained
+- PAYOFF (35-42s): the most surprising implication or open question
+- CTA (final 3s): one short follow / comment prompt
+
+Hard rules:
+- "body" must be at least 90 words (spoken pace ~2.5 words/sec).
+  A list of topic names with no explanation is a FAILED script.
+- Every sentence must teach something concrete. No teasers like
+  "scientists are baffled" without saying what was actually found.
+- narration-friendly: short spoken sentences, no abbreviations,
+  no parentheses, no emojis
+- no generic AI phrases: "In this video", "Let's dive in", "unveil",
+  "delve", "unlock"
+- speak directly to the viewer
+
+Output STRICT JSON: {"hook": str, "body": str, "cta": str,
+"duration_seconds": int}}
+
+Return only the JSON object. "body" contains the narration text between
+hook and cta.

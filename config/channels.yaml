@@ -1,0 +1,14 @@
+channels:
+  science_shorts:
+    niche: science
+    language: en
+    duration:
+      min: 30
+      max: 50
+    style:
+      pacing: fast
+      visual_style: cinematic
+      captions: bold
+    content:
+      educational: true
+      fictional: false

@@ -1,0 +1,5 @@
+content_rules:
+  max_claims_per_video: 3
+  unverified_claims: drop
+  banned_topics: []
+  min_confidence: 0.7

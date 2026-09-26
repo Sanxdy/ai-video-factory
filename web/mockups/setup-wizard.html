@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AVF first-run wizard — mockup</title>
+<!--
+  Mockup for review, not shipped code. It links the app's real built stylesheet and
+  uses the app's real class names and markup patterns, so what you see here is what
+  the page will look like. Regenerate the CSS link if the hash changes:
+      ls web/out/_next/static/css/
+-->
+<link rel="stylesheet" href="../out/_next/static/css/e8d031c57d4a5473.css">
+<style>
+  /* Mockup chrome only — none of this would ship. */
+  .mk { max-width: 1180px; margin: 0 auto; padding: 32px 24px 96px; }
+  .mk-head { position: sticky; top: 0; z-index: 10; background: var(--color-background);
+             border-bottom: 1px solid var(--color-border); padding: 12px 0; margin-bottom: 32px; }
+  .mk-head h1 { font-size: 1.1rem; }
+  .mk-head .row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .mk-screen { border: 1px dashed rgba(255,255,255,.14); border-radius: var(--radius);
+               margin-bottom: 40px; overflow: hidden; }
+  .mk-cap { font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+            color: var(--color-muted); padding: 10px 16px;
+            background: var(--color-surface); border-bottom: 1px dashed rgba(255,255,255,.14); }
+  .mk-body { padding: 32px 24px; }
+  /* The real shell is a full-viewport flex; inside a mockup box that reads wrong. */
+  .mk-body .shell { min-height: 0; display: flex; }
+  .mk-body .main { max-width: none; }
+  .wiz { max-width: 640px; margin: 0 auto; }
+  .wiz h1 { margin-bottom: 6px; }
+  .wiz ul { padding-left: 20px; color: var(--color-muted); font-size: .88rem; }
+  .wiz li { margin-bottom: 6px; }
+  .wiz code { background: var(--color-surface-2); padding: 1px 6px; border-radius: 4px;
+              font-size: .82rem; }
+  .mk-note { border-left: 3px solid var(--color-accent); padding: 10px 14px; margin: 0 0 32px;
+             background: rgba(59,130,246,.07); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+             font-size: .84rem; color: var(--color-muted); }
+  .mk-note strong { color: var(--color-foreground); }
+  .mk-note code { background: var(--color-surface-2); padding: 1px 5px; border-radius: 4px; }
+
+  /* Would ship, in globals.css — the wizard carries its own setup instructions
+     because packaging/README.md is not part of the bundle. */
+  .howto { border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+           background: var(--color-surface-2); margin-bottom: var(--space-4); }
+  .howto > summary { padding: 10px 12px; cursor: pointer; font-size: .84rem;
+                     font-weight: 500; color: var(--color-foreground); list-style-position: inside; }
+  .howto > summary::marker { color: var(--color-primary); }
+  .howto > summary:hover { color: var(--color-primary); }
+  .howto ol { margin: 0; padding: 0 16px 12px 34px; color: var(--color-muted);
+              font-size: .8rem; line-height: 1.55; }
+  .howto li { margin-bottom: 7px; }
+  .howto li strong, .howto li code { color: var(--color-foreground); }
+  .howto ul { margin: 4px 0 0; padding-left: 18px; }
+  .howto ul li { margin-bottom: 3px; }
+  .howto .trap { color: #FBBF24; }
+  .howto .trap strong { color: #FBBF24; }
+
+  /* No :disabled rule needed — globals.css:112 already ships one. */
+</style>
+</head>
+<body>
+<div class="mk">
+
+  <div class="mk-head">
+    <div class="row">
+      <h1>First-run wizard — <code>/setup</code></h1>
+      <span class="hint">Sidebar hidden on this route — agreed.</span>
+    </div>
+  </div>
+
+  <p class="mk-note">
+    <strong>Sidebar is off here.</strong> Every other page is empty or useless until a key exists,
+    so the wizard is a tunnel — one column, one decision at a time. Costs one line in
+    <code>web/app/layout.tsx</code>: <code>pathname === "/setup"</code> skips the <code>&lt;nav&gt;</code>.
+    The screens below are drawn that way.
+  </p>
+
+  <!-- ─────────────────────────── step 1 ─────────────────────────── -->
+  <section class="mk-screen">
+    <p class="mk-cap">Step 1 of 3 — AI model · required · nothing is stored until you save</p>
+    <div class="mk-body">
+      <div class="shell">
+        <main class="main">
+          <div class="card wiz">
+            <div class="steps">
+              <div class="step step-active"><span class="step-dot"></span><span class="step-label">AI model</span></div>
+              <div class="step"><span class="step-dot"></span><span class="step-label">Stock footage</span></div>
+              <div class="step"><span class="step-dot"></span><span class="step-label">YouTube</span></div>
+            </div>
+
+            <h1>Welcome to AVF</h1>
+            <p class="hint" style="margin-bottom: var(--space-5)">
+              One thing is required before AVF can produce anything: an LLM to write the script,
+              plan the scenes and time the subtitles. Everything else has a working default.
+              The key is stored on this machine and sent only to the endpoint you name below.
+            </p>
+
+            <div class="field">
+              <span>Base URL</span>
+              <input class="input" type="text" value="https://api.openai.com/v1">
+              <p class="hint">Any OpenAI-compatible endpoint: OpenAI, Groq, OpenRouter, DeepSeek, LM Studio…</p>
+            </div>
+            <div class="field">
+              <span>Model name</span>
+              <input class="input" type="text" value="gpt-4o-mini">
+            </div>
+            <div class="field">
+              <span>API key</span>
+              <input class="input" type="password" value="sk-proj-xxxxxxxxxxxxxxxx">
+            </div>
+
+            <div class="msg msg-ok" style="margin-bottom: var(--space-4)">
+              Connected — gpt-4o-mini replied in 412 ms.
+            </div>
+
+            <div class="formrow">
+              <button class="btn btn-primary">Save and continue</button>
+              <button class="btn btn-secondary">Test connection</button>
+              <span class="hint">Test sends one prompt and stores nothing.</span>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── step 2 ─────────────────────────── -->
+  <section class="mk-screen">
+    <p class="mk-cap">Step 2 of 3 — stock footage · required; no key means no footage, so no video</p>
+    <div class="mk-body">
+      <div class="shell">
+        <main class="main">
+          <div class="card wiz">
+            <div class="steps">
+              <div class="step step-done"><span class="step-dot"></span><span class="step-label">AI model</span></div>
+              <div class="step step-active"><span class="step-dot"></span><span class="step-label">Stock footage</span></div>
+              <div class="step"><span class="step-dot"></span><span class="step-label">YouTube</span></div>
+            </div>
+
+            <h1>Stock footage</h1>
+            <p class="hint" style="margin-bottom: var(--space-4)">
+              <strong>One of these two keys is required.</strong> Moving footage can only come from
+              <strong>Pexels</strong> or <strong>Pixabay</strong> — those are the only two sources AVF has,
+              and each needs its own free API key. Paste at least one to continue.
+            </p>
+            <p class="hint" style="margin-bottom: var(--space-5)">
+              There is no keyless substitute, so this step cannot be skipped. AVF has no AI video
+              generator; without a stock key the scenes become still pictures with a slow zoom across
+              them, which is not a video worth watching. The free still service that would supply those
+              pictures is also unreliable at video resolution — in testing it failed 2 of 5 requests,
+              quietly returned 576×1024 when asked for 1080×1920, took 22–47 seconds each time, and
+              stamped its own watermark in the corner, which the final crop does not remove.
+            </p>
+
+            <div class="field">
+              <span>Pexels</span>
+              <label style="display:flex; align-items:flex-start; gap:10px; background:var(--color-surface-2);
+                            border:1px solid rgba(236,72,153,.45); border-radius:var(--radius-sm);
+                            padding:10px 12px; cursor:pointer">
+                <input type="checkbox" checked style="margin-top:3px; width:15px; height:15px;
+                       flex:0 0 auto; accent-color:var(--color-primary)">
+                <span>
+                  <span style="font-weight:600; font-size:.86rem">Use Pexels footage</span>
+                  <span class="badge badge-approval" style="margin-left:6px">no key yet</span>
+                  <span style="display:block; color:var(--color-muted); font-size:.74rem; margin-top:2px">
+                    Searched with the full fallback chain, so more queries find something.
+                    No caching requirement — results are always fresh.
+                  </span>
+                </span>
+              </label>
+
+              <details class="howto" style="margin-top:8px" open>
+                <summary>Where do I get a Pexels key? — free, about a minute</summary>
+                <ol>
+                  <li>Open <a href="https://www.pexels.com/api/" target="_blank" rel="noreferrer">pexels.com/api</a>
+                    and click <strong>Get Started</strong>.</li>
+                  <li>Sign up or log in. A free Pexels account is enough — no credit card, no company
+                    details, and this is a normal Pexels account, not a separate developer signup.</li>
+                  <li>You land on a form asking for an application name and description. It is only
+                    ever shown to you — put anything, e.g. name <code>AVF</code>, description
+                    <code>local video generator</code>.</li>
+                  <li>Submit. Your key is displayed immediately on that page: a long string of letters
+                    and numbers. Copy it and paste it in the box below.</li>
+                </ol>
+                <p class="hint" style="padding:0 16px 12px 34px; margin:0">
+                  The free tier is meant for exactly this kind of use. AVF caches every search on
+                  disk for 24 hours, so a video costs a handful of requests, not one per scene.
+                </p>
+              </details>
+
+              <input class="input" type="password" style="margin-top:8px"
+                     placeholder="Paste your Pexels API key here">
+            </div>
+
+            <div class="field">
+              <span>Pixabay</span>
+              <label style="display:flex; align-items:flex-start; gap:10px; background:var(--color-surface-2);
+                            border:1px solid var(--color-border); border-radius:var(--radius-sm);
+                            padding:10px 12px; cursor:pointer">
+                <input type="checkbox" style="margin-top:3px; width:15px; height:15px;
+                       flex:0 0 auto; accent-color:var(--color-primary)">
+                <span>
+                  <span style="font-weight:600; font-size:.86rem">Use Pixabay footage</span>
+                  <span class="badge badge-approval" style="margin-left:6px">no key yet</span>
+                  <span style="display:block; color:var(--color-muted); font-size:.74rem; margin-top:2px">
+                    A second library, so a scene Pexels cannot match may still find one here.
+                    Searched on the primary query only, results cached 24h, throttled to 30/min.
+                  </span>
+                </span>
+              </label>
+
+              <details class="howto" style="margin-top:8px">
+                <summary>Where do I get a Pixabay key? — free, about a minute</summary>
+                <ol>
+                  <li>Create a free account at
+                    <a href="https://pixabay.com/accounts/register/" target="_blank" rel="noreferrer">pixabay.com</a>
+                    if you do not have one, then log in.</li>
+                  <li>Open <a href="https://pixabay.com/api/docs/" target="_blank" rel="noreferrer">pixabay.com/api/docs</a>
+                    <strong>while logged in</strong>. This page <em>is</em> the key page — there is no
+                    separate application form to fill in.</li>
+                  <li>Near the top of that page, in the parameter table, find the row for
+                    <code>key</code>. Your personal API key is shown right there, in place of the
+                    placeholder. Copy it and paste it in the box below.</li>
+                </ol>
+                <p class="hint" style="padding:0 16px 12px 34px; margin:0">
+                  If you see a placeholder instead of a real key, you are not logged in — log in and
+                  reload the page. Pixabay allows 100 requests per minute; AVF deliberately stays at
+                  30 and caches every search for 24 hours, which is what their API terms require.
+                </p>
+              </details>
+
+              <input class="input" type="password" style="margin-top:8px"
+                     placeholder="Paste your Pixabay API key here">
+            </div>
+
+            <p class="hint" style="margin-bottom: var(--space-4)">
+              Turn both on and AVF searches both and takes the better match. A box that is ticked
+              with no key pasted is ignored — that is why each box sits next to its own key field.
+            </p>
+
+            <div class="formrow">
+              <!-- No skip button any more. stock_sources() drops a ticked source that has no
+                   key, so "continue without a key" would walk the user straight into a render
+                   with no footage. Disabled until one key field is non-empty. -->
+              <button class="btn btn-primary" disabled>Save and continue</button>
+              <span class="hint" style="align-self:center; margin:0">
+                Enabled once one of the key fields above has a value.
+              </span>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── step 3 ─────────────────────────── -->
+  <section class="mk-screen">
+    <p class="mk-cap">Step 3 of 3 — YouTube · optional · the how-to is collapsed by default, shown open here</p>
+    <div class="mk-body">
+      <div class="shell">
+        <main class="main">
+          <div class="card wiz">
+            <div class="steps">
+              <div class="step step-done"><span class="step-dot"></span><span class="step-label">AI model</span></div>
+              <div class="step step-done"><span class="step-dot"></span><span class="step-label">Stock footage</span></div>
+              <div class="step step-active"><span class="step-dot"></span><span class="step-label">YouTube</span></div>
+            </div>
+
+            <h1>YouTube uploads</h1>
+            <p class="hint" style="margin-bottom: var(--space-4)">
+              Optional. Skip it and AVF still renders videos — you just upload them yourself.
+              This connects <em>your</em> channel with <em>your</em> OAuth client; nothing is shared
+              with anyone else.
+            </p>
+
+            <div class="msg msg-warn" style="margin-bottom: var(--space-5)">
+              <span>
+                <strong>Before you connect: set the OAuth consent screen to “In production”.</strong><br>
+                Left on “Testing”, Google expires the refresh token after 7 days — day 1 works, day 8
+                uploads start failing with an auth error and it looks like an AVF bug. Publishing to
+                production is free and needs no Google verification review; you just click through a
+                “Google hasn’t verified this app” screen once.
+              </span>
+            </div>
+
+            <details class="howto" open>
+              <summary>How do I get <code>client_secret.json</code>? — six steps, free, no coding</summary>
+              <ol>
+                <li>
+                  <strong>Create a project.</strong> Open
+                  <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noreferrer">console.cloud.google.com/projectcreate</a>.
+                  Give it any name (<code>avf</code> is fine), leave “Location” as
+                  <em>No organisation</em>, and click <strong>Create</strong>. Wait for the notification
+                  that says it is ready, then make sure this project is the one selected in the
+                  <strong>project picker at the very top of the page</strong> — every step below applies
+                  to whichever project is selected there, and picking the wrong one is the most common
+                  way to end up with a file AVF cannot use.
+                </li>
+                <li>
+                  <strong>Turn on the YouTube API.</strong> Open
+                  <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noreferrer">YouTube Data API v3</a>.
+                  Check the picker still shows your project, then click the blue <strong>Enable</strong>
+                  button. If you instead see <strong>Manage</strong>, it is already enabled — continue.
+                </li>
+                <li>
+                  <strong>Fill in the consent screen.</strong> Open
+                  <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noreferrer">the consent screen</a>.
+                  In newer consoles this page is titled <strong>Google Auth Platform</strong> and is split
+                  into tabs on the left; in older ones it is one long form. Either way:
+                  <ul>
+                    <li>User type: <strong>External</strong> (this means “any Google account”, not
+                      “outside my company”).</li>
+                    <li>App name: anything — <code>AVF</code>. You are the only person who will ever see it.</li>
+                    <li>User support email and developer contact email: your own address, twice.</li>
+                    <li>Audience / Publishing status: leave <strong>Testing</strong> for now — the next
+                      step fixes it. If it asks for <em>test users</em>, add your own Gmail address.</li>
+                    <li>Scopes: click <strong>Add or remove scopes</strong> and paste
+                      <code>https://www.googleapis.com/auth/youtube.upload</code> into the filter box,
+                      tick it, then <strong>Update</strong>. Optionally also add
+                      <code>https://www.googleapis.com/auth/youtube.readonly</code> if you want the
+                      analytics page to show real numbers.</li>
+                  </ul>
+                </li>
+                <li class="trap">
+                  ⚠️ <strong>Publish the app — do not leave it in “Testing”.</strong> On that same
+                  consent screen, find <strong>Publish app</strong> (in the new console it is under the
+                  <strong>Audience</strong> tab) and confirm. The status must read
+                  <strong>In production</strong>. This is the single step everyone misses; see the amber
+                  box above for what it costs. Publishing is free, needs no Google review, and the only
+                  visible effect is that you click through a <em>“Google hasn’t verified this app”</em>
+                  screen once — choose <strong>Advanced → Go to AVF (unsafe)</strong>. That wording is
+                  Google’s default for any app that has not paid for verification; it is not a warning
+                  about AVF specifically.
+                </li>
+                <li>
+                  <strong>Create the credential.</strong> Open
+                  <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">Credentials</a>
+                  → <strong>+ Create credentials</strong> → <strong>OAuth client ID</strong>.
+                  Application type must be <strong>Desktop app</strong>. Name it anything and click
+                  <strong>Create</strong>.
+                  <br><span style="color:#FBBF24">Choose <strong>Desktop app</strong>, not “Web
+                  application”.</span> The two produce different JSON files: a Web-application file has a
+                  <code>"web"</code> section, a Desktop-app file has an <code>"installed"</code> section,
+                  and AVF only accepts the latter. Picking the wrong one is the other way to get a file
+                  that is rejected here.
+                </li>
+                <li>
+                  <strong>Download it.</strong> A dialog appears with your client ID and secret — click
+                  <strong>Download JSON</strong>. Your browser saves a file named something like
+                  <code>client_secret_1234-abc.apps.googleusercontent.com.json</code>.
+                  <strong>Leave the name exactly as it is</strong> — despite the name in older
+                  instructions, AVF reads the file’s contents and never looks at the filename, so
+                  renaming it to <code>client_secret.json</code> is unnecessary. If you have lost the
+                  dialog, the same download link is always available under
+                  <strong>Credentials</strong> in the ⬇ icon next to your OAuth client.
+                </li>
+              </ol>
+              <p class="hint" style="padding:0 16px 12px 34px; margin:0">
+                That is all of it. Nothing here costs money and there is no approval queue — the whole
+                sequence takes about five minutes. The file you just downloaded is a
+                <em>credential for your own project</em>, not an account or a subscription, and it is
+                safe to keep on this machine.
+              </p>
+            </details>
+
+            <div class="field">
+              <span>Client secret (the JSON you just downloaded)</span>
+              <input class="input" type="file" style="padding: 8px">
+              <p class="hint">
+                Drag in the downloaded file under any name. It is read once to start the sign-in, then
+                kept locally next to the token. Nothing is uploaded anywhere. If you see
+                <em>“not a Desktop-app client secret”</em>, the credential was created as a Web
+                application — go back to step 5 and make a Desktop app one.
+              </p>
+            </div>
+
+            <div class="formrow" style="margin-bottom: var(--space-4)">
+              <!-- Settings keeps these primary; here "Continue" is the step's forward
+                   action, so only one button on screen is pink. -->
+              <button class="btn btn-secondary">1. Connect with Google</button>
+            </div>
+
+            <div class="field">
+              <span>2. Paste the redirected URL or code</span>
+              <input class="input" type="text" placeholder="http://localhost/?code=4/0Axx…  or  4/0Axx…">
+              <p class="hint">Approving lands you on a localhost page that won’t load — that’s expected. Copy the address bar.</p>
+              <div class="formrow" style="margin-top: 8px">
+                <button class="btn btn-secondary">3. Finish connection</button>
+              </div>
+            </div>
+
+            <div class="formrow">
+              <button class="btn btn-primary">Continue</button>
+              <button class="btn btn-secondary">Skip — I’ll upload manually</button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────── done ─────────────────────────── -->
+  <section class="mk-screen">
+    <p class="mk-cap">Finished — shown once, then the gate stops redirecting</p>
+    <div class="mk-body">
+      <div class="shell">
+        <main class="main">
+          <div class="card wiz">
+            <div class="steps">
+              <div class="step step-done"><span class="step-dot"></span><span class="step-label">AI model</span></div>
+              <div class="step step-done"><span class="step-dot"></span><span class="step-label">Stock footage</span></div>
+              <div class="step step-done"><span class="step-dot"></span><span class="step-label">YouTube</span></div>
+            </div>
+
+            <h1>You’re set up</h1>
+            <p class="hint" style="margin-bottom: var(--space-4)">
+              Three things worth knowing before the first render.
+            </p>
+            <ul style="margin-bottom: var(--space-5)">
+              <li>
+                Voice and subtitle models (~340 MB) download the first time you produce a video.
+                That first run is slow; later ones aren’t.
+              </li>
+              <li>
+                Scenes are filled from stock footage, so a scene is real moving video. If a search
+                finds nothing for a scene, AVF falls back to a still image for that one scene only.
+                Adding a second key — the other of Pexels or Pixabay — is the easiest way to reduce
+                that. Keys live in <strong>Settings → Media</strong>.
+              </li>
+              <li>
+                Everything AVF writes lives in one folder —
+                <code>~/Library/Application Support/AVF</code> on macOS,
+                <code>%APPDATA%\AVF</code> on Windows.
+                Rendered videos are under <code>content/rendered/</code>, logs under <code>runtime/logs/</code>.
+                It is read-only here: there is no output-folder setting to change.
+              </li>
+            </ul>
+            <div class="formrow">
+              <button class="btn btn-primary">Produce your first video</button>
+              <button class="btn btn-secondary">Go to Settings</button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+
+  <p class="mk-note">
+    <strong>Behaviour notes.</strong>
+    The gate lives in <code>web/app/layout.tsx</code>: on mount, if the path is not
+    <code>/setup</code> and <code>GET /api/settings/llm</code> reports <code>has_api_key: false</code>,
+    redirect to <code>/setup</code>. It only ever fires on step 1 — once a key exists the wizard
+    never appears again, and it stays reachable by URL. The dashboard’s empty state gets a
+    “Finish setup” link too, for anyone who skipped past it.
+    <br><br>
+    <strong>Stock footage is required, not optional.</strong> The first two drafts treated it as
+    skippable and offered “use free AI stills” as the alternative. That was wrong, and the evidence
+    is in the code, not a matter of taste. <code>providers/stock.py:37</code> defines exactly two
+    sources, <code>PROVIDERS = ("pexels", "pixabay")</code>, and <code>stock_sources()</code> filters
+    them to the ones <em>that have a key</em> — so no key means no stock at all, with no third source
+    and no keyless fallback. <code>providers/video/__init__.py</code> is <strong>empty</strong>
+    (0 bytes), and <code>AnimateDiff</code> appears nowhere in the repo, so there is no AI video
+    generator to fall back on either. The only keyless path is <code>image.provider</code> →
+    <code>pollinations</code> → a generated still with Ken Burns zoom/pan
+    (<code>editor.py:36-41</code>), which is a picture, not footage.
+    <br><br>
+    <strong>Measured, not assumed.</strong> Five requests to Pollinations at production resolution
+    (1080×1920), through the app’s own <code>ImageProvider.generate()</code>: two returned HTTP 500,
+    and the three that succeeded came back as <strong>576×1024</strong> — half the requested size, which
+    <code>_fit()</code> then upscales 1.88×. Each successful image took 22–47 seconds. Both of the
+    ones viewed carry a <code>pollinations.ai</code> watermark in the bottom-right that
+    <code>nologo=true</code> did not remove, and because the source is already 9:16
+    the centre crop is a no-op, so the watermark reaches the finished video. There is no retry around
+    the call (<code>generate()</code> tries each tier once), so a single 500 drops that scene straight
+    to <code>_gen_gradient</code> — a flat two-tone colour with no content at all. Hence the removed
+    skip button, and hence the disabled state on <em>Save and continue</em> until a key field is filled.
+    <br><br>
+    <strong>Still needs a server-side guard.</strong> The wizard gate is client-side only, so
+    <code>POST /api/produce</code> should also refuse with 409 when no stock key is stored. That guard
+    does not exist yet — the LLM one does, and is the shape to copy:
+    <code>server.py:452-456</code> already raises 409 with “AI model not configured — open /setup”,
+    so Fase 0.3 shipped that half. Nothing equivalent covers stock, and
+    <code>POST /api/settings/image</code> only validates at save time
+    (<code>server.py:1248</code>). The stale progress message at
+    <code>pipeline.py:219</code> — “Scene asset N/M (AI clip can take ~11 min)” — should go too: it
+    is left over from the AnimateDiff era and promises an AI video that no longer exists anywhere in
+    the code.
+    <br><br>
+    <strong>Sidebar is hidden</strong> on this route: <code>web/app/layout.tsx</code> skips the
+    <code>&lt;nav&gt;</code> when <code>pathname === "/setup"</code>.
+    <br><br>
+    <strong>The how-tos live in the page.</strong> The first draft pointed at
+    <code>packaging/README.md</code>, which is not part of the bundle — <code>build.py</code> copies
+    only <code>desktop.py</code> and <code>smoke.py</code> out of <code>packaging/</code>, so a
+    shipped app has no <code>packaging/</code> folder and that reference would 404 for every end
+    user. Both the Pexels/Pixabay and the Google steps are now inline, collapsed behind
+    <code>&lt;details&gt;</code>. Two details in the Google steps come from reading the code rather
+    than the old docs: the filename does not matter
+    (<code>save_secret()</code> at <code>apps/uploader/youtube.py:131</code> reads the contents
+    only), and a “Web application” credential is rejected outright because it lacks the
+    <code>"installed"</code> key the function requires.
+    <br><br>
+    <strong>No new server code.</strong> Every control here already exists:
+    <code>POST /api/llm/test</code> (stores nothing), <code>POST /api/settings/llm</code>,
+    <code>POST /api/settings/image</code>, and the three
+    <code>/settings/youtube/secret|start|finish</code> calls. The page exports as
+    <code>web/out/setup.html</code>, which the existing SPA fallback already serves.
+  </p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# Generate 5-10 viral-style short-form video ideas for the given niche.
+# Output STRICT JSON: {"ideas":[{"topic": str, "hook": str, "reason": str,
+# "estimated_interest": int 0-100, "difficulty": int 0-100}]}
+# Score by: curiosity, emotional impact, novelty, visual potential,
+# short-form suitability, factual availability, production difficulty.
+
+Channel: {channel}
+Niche: {niche}
+Language: {language}
+
+## CRITICAL RULES FOR TOPIC DIVERSITY
+Every idea MUST use a DIFFERENT title format. You MUST rotate through these formats — never repeat the same format twice in one batch:
+
+1. **"Why" questions** — "Why the Ocean Is Actually Blue" (max 1 per batch)
+2. **"How" tutorials** — "How a Single Raindrop Survives a Hurricane"
+3. **"The [Noun]"** — "The Hidden Reason Cats Purr"
+4. **"[Verb] + [Object]"** — "Turning Rust Into Gold: The Chemistry of Restoration"
+5. **"Numbered lists"** — "3 Things You Didn't Know About Sleep"
+6. **"Story/narrative"** — "The Day the Internet Almost Died"
+7. **"Comparisons"** — "Diamond vs Steel: Which Is Actually Stronger?"
+8. **"Myth-busting"** — "Everything You Know About Lightning Is Wrong"
+9. **"Exploring/discovery"** — "Inside Earth's Deepest Cave — What Scientists Found"
+10. **"Counterintuitive"** — "Why Slowing Down Makes You Faster"
+
+Mix scientific curiosity, surprising facts, and emotional hooks. Avoid generic or vague topics. Each topic should be specific enough to produce a compelling 60-second video.
+
+Return only the JSON object. No markdown, no commentary.

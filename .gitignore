@@ -1,0 +1,37 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+runtime/
+content/
+database/
+cache/
+*.db
+*.pkl
+.DS_Store
+web/out/
+node_modules/
+ai_video_factory.egg-info/
+
+# zcode local session artifacts
+.zcode/
+
+# large media / rendered assets (never commit)
+*.mp4
+*.mp3
+*.wav
+*.webm
+*.mkv
+*.mov
+
+# credentials & secrets (never commit)
+*token*.json
+client_secret*.json
+*credential*
+*.key
+*.pem
+
+# packaging artifacts: assembled bundles and their download cache, plus
+# setuptools' wheel build directory
+packaging/out/
+build/
