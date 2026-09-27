@@ -29,41 +29,48 @@ if (SOURCE / "core").is_dir():
 HOST = "127.0.0.1"
 TITLE = "AVF Console"
 
-# Shortest time the splash stays on screen after the window is shown. Small
-# enough not to delay anyone, long enough to be seen at all.
-SPLASH_MIN_SECS = 1.5
+# Shortest time the splash stays on screen after the window is shown. Long
+# enough to read as a deliberate opening beat, short enough to never delay.
+SPLASH_MIN_SECS = 2.0
 
 # Shown while the API server boots and the first Next.js bundle is parsed — a
 # cold start is a few seconds of nothing otherwise. Inline rather than served:
 # the window is created before the server can answer, so a served splash could
 # itself 404, and this page must render with no network at all.
+#
+# Dark, on purpose: the console it hands over to is dark, and a light splash
+# reads as an empty page that flashed past. The window's background_color is
+# the same colour, so even the frame before this HTML paints is brand-dark —
+# WKWebView otherwise paints white first, which is exactly how a splash
+# disappears into "the app was just there".
 SPLASH = """<!doctype html><html><head><meta charset="utf-8">
 <title>AVF Console</title><style>
-  :root { color-scheme: light; }
+  :root { color-scheme: dark; }
   html, body { height: 100%; margin: 0; }
   body {
-    display: grid; place-content: center; gap: 18px; justify-items: center;
-    background: #EFF8F7; color: #10312F;
+    display: grid; place-content: center; gap: 20px; justify-items: center;
+    background: #0A0D12; color: #E8EBF1;
     font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-user-select: none; user-select: none;
   }
-  .mark { width: 68px; height: 68px; }
-  .name { font-size: 17px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #1E8C86; }
-  .sub { color: #547370; font-size: 12.5px; }
-  .bar { width: 190px; height: 3px; border-radius: 2px; background: #CDE7E4; overflow: hidden; }
+  .mark { width: 76px; height: 76px; filter: drop-shadow(0 6px 24px rgba(45,212,191,.25)); }
+  .name { font-size: 18px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #F4F6F9; }
+  .name span { color: #2DD4BF; }
+  .bar { width: 210px; height: 3px; border-radius: 2px; background: #1B212C; overflow: hidden; }
   .bar i { display: block; width: 38%; height: 100%; border-radius: 2px;
-           background: #2BA8A2; animation: slide 1.15s ease-in-out infinite; }
+           background: #2DD4BF; animation: slide 1.15s ease-in-out infinite; }
   @keyframes slide { 0% { transform: translateX(-100%); }
                      100% { transform: translateX(320%); } }
+  .sub { color: #9AA3B4; font-size: 12.5px; }
   @media (prefers-reduced-motion: reduce) { .bar i { animation: none; width: 100%; } }
 </style></head><body>
   <svg class="mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <rect x="1.5" y="4" width="21" height="16" rx="4.5" fill="#2BA8A2"/>
-    <path d="M10 8.5L16 12L10 15.5V8.5Z" fill="#10312F"/>
+    <rect x="1.5" y="4" width="21" height="16" rx="4.5" fill="#2DD4BF"/>
+    <path d="M10 8.5L16 12L10 15.5V8.5Z" fill="#0A0D12"/>
   </svg>
-  <div class="name">AVF Console</div>
+  <div class="name">AVF <span>Console</span></div>
   <div class="bar"><i></i></div>
-  <div class="sub" id="s">Starting the local server…</div>
+  <div class="sub" id="s">Starting the local engine…</div>
   <script>
     // After ~8s say what is actually slow, so a long wait is not read as a hang.
     setTimeout(function () {
@@ -205,8 +212,12 @@ def main() -> int:
     # The window opens on the splash straight away and swaps to the app once
     # /api/health answers, so a cold start shows progress instead of an empty
     # frame. Waiting first would leave the user with no window for those seconds.
+    # background_color matches the splash: before any HTML paints, WKWebView
+    # shows the window background — white unless told otherwise, which read as
+    # "the app was just there, no splash".
     window = webview.create_window(TITLE, html=SPLASH, width=1440, height=900,
-                                   min_size=(1024, 640))
+                                   min_size=(1024, 640),
+                                   background_color="#0A0D12")
     # pywebview blocks <a download> unless told otherwise, and the UI's entire
     # output path is three of those links: video, subtitles, thumbnail. Links
     # opened with target=_blank already go to the system browser by default,
@@ -214,9 +225,22 @@ def main() -> int:
     webview.settings["ALLOW_DOWNLOADS"] = True
 
     shown: list[float] = []          # when the window actually hit the screen
+    t0 = time.time()
+
+    def _trace(msg: str) -> None:
+        """Launch timings to the data dir — a splash claim you can check."""
+        try:
+            from core.config import data_dir
+            log = data_dir() / "runtime" / "logs" / "desktop.log"
+            log.parent.mkdir(parents=True, exist_ok=True)
+            with open(log, "a") as f:
+                f.write(f"launch +{time.time() - t0:5.2f}s  {msg}\n")
+        except Exception:
+            pass
 
     def _on_shown() -> None:
         shown.append(time.time())
+        _trace("window shown — splash on screen")
 
     window.events.shown += _on_shown
 
@@ -229,19 +253,20 @@ def main() -> int:
                 "<div><b>The server did not start.</b><br><br>"
                 "See <code>runtime/logs/desktop.log</code> in the AVF data folder."
                 "</div></body>")
+            _trace("server FAILED to come up")
             return
-        # Hold the splash to a minimum even on a warm start. Measured on the
-        # build machine: /api/health answered at 0.41s but the window only
-        # painted at 0.53s — load_url fired before the first frame, so the
-        # splash never showed and the launch looked like it had none. Waiting
-        # for `shown` and flooring the display time turns it into a deliberate
-        # beat; a genuinely slow start waits no longer than it already would.
+        _trace("/api/health up")
+        # Hold the splash to a minimum even on a warm start, and only swap
+        # after the window has genuinely painted — `shown` can beat the first
+        # frame, so the floor is measured from it. A genuinely slow start
+        # waits no longer than it already would.
         deadline = time.time() + 10
         while not shown and time.time() < deadline:
             time.sleep(0.05)
         wait = SPLASH_MIN_SECS - (time.time() - (shown[0] if shown else time.time()))
         if wait > 0:
             time.sleep(wait)
+        _trace(f"swapping splash → console")
         window.load_url(url)
 
     def _closing() -> bool:
