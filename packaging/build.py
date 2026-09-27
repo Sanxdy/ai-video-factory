@@ -368,13 +368,25 @@ def dmg(stage: Path, app: str, out: Path) -> Path:
     # fails to resolve it, so the background silently never draws. Mounted at
     # /Volumes/<volname> the alias points where every user's mount lands too.
     mount = Path("/Volumes") / volname
-    if mount.exists() and not any(mount.iterdir()):
-        mount.rmdir()  # stale empty dir from a crashed build would force "... 1"
-    sh(["hdiutil", "attach", str(tmp), "-nobrowse", "-quiet"])
+    if mount.exists():
+        if not any(mount.iterdir()):
+            mount.rmdir()  # stale empty dir from a crashed build would force "... 1"
+        else:
+            raise SystemExit(
+                f"a volume is already mounted at {mount} — eject it first (it is "
+                f"another AVF image; taking the name would land this styling on "
+                f"the wrong disk, and ejecting by path could hit that one instead)")
+    proc = subprocess.run(["hdiutil", "attach", str(tmp), "-nobrowse"],
+                          check=True, capture_output=True, text=True, cwd=REPO)
+    # attach prints "<dev> … <mountpoint>"; detach by DEVICE, never by path —
+    # a path detach with a colliding name could eject somebody else's volume.
+    dev = proc.stdout.split()[0]
     try:
+        if not (mount.is_dir() and os.access(mount, os.W_OK)):
+            raise SystemExit(f"{mount} is not our writable styling volume — aborting")
         _style_dmg_volume(mount, app)
     finally:
-        sh(["hdiutil", "detach", str(mount), "-quiet"])
+        sh(["hdiutil", "detach", dev, "-quiet"])
     sh(["hdiutil", "convert", str(tmp), "-format", "UDZO", "-o", str(out)])
     tmp.unlink(missing_ok=True)
     shutil.rmtree(work, ignore_errors=True)
