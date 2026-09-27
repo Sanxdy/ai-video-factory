@@ -166,7 +166,8 @@ def _cta_examples(db: Database, limit: int = 3) -> str:
 
 
 def generate_longform_script(db: Database, idea: dict, facts: str,
-                             target: float, project_id: int | None) -> int:
+                             target: float, project_id: int | None,
+                             revision_note: str = "") -> int:
     """Countdown script, ONE LLM CALL PER SECTION.
 
     A single call for 700+ spoken words comes back truncated or summarized by
@@ -200,13 +201,13 @@ def generate_longform_script(db: Database, idea: dict, facts: str,
 
     parts, headings, written = [], [], []
     for i, kind in enumerate(kinds):
-        prompt = render_prompt(
+        prompt = revision_prompt(render_prompt(
             "longform", topic=idea["topic"], facts=facts, section=kind,
             index=i + 1, total=len(kinds), words=per[kind], language=narration_language(),
             written=" | ".join(written) or "(none yet)",
             rank_note=_rank_note(kind, ranks.get(kind), items),
             cta_examples=cta_examples,
-        )
+        ), revision_note)
         out = generate_parsed("longform", prompt, temperature=0.7).model_dump()
         narration = (out.get("narration") or "").strip()
         if not narration:
@@ -233,7 +234,22 @@ def generate_longform_script(db: Database, idea: dict, facts: str,
     return sid
 
 
-def generate_script(db: Database, idea_id: int, project_id: int | None = None) -> int:
+def revision_prompt(prompt: str, note: str) -> str:
+    """Append the user's rejection note as a revision instruction.
+
+    The note alone is not enough — the model must also be told the last version
+    was rejected, or it just writes another draft in the same vein.
+    """
+    note = (note or "").strip()
+    if not note:
+        return prompt
+    return (prompt + f"\n\nREVISION: the previous version of this video was rejected "
+            f"by the user because: {note}\nProduce a completely new version that "
+            f"fixes these problems. Do not reuse the rejected approach.")
+
+
+def generate_script(db: Database, idea_id: int, project_id: int | None = None,
+                    revision_note: str = "") -> int:
     """Generate script, persist, return script id."""
     idea = db.get("ideas", idea_id)
     res = db.all("research", "idea_id=?", (idea_id,))
@@ -241,12 +257,13 @@ def generate_script(db: Database, idea_id: int, project_id: int | None = None) -
 
     target = _target_duration(project_id)
     if target >= LONGFORM_MIN:
-        return generate_longform_script(db, idea, facts, target, project_id)
+        return generate_longform_script(db, idea, facts, target, project_id,
+                                        revision_note=revision_note)
 
-    prompt = render_prompt(
+    prompt = revision_prompt(render_prompt(
         "scripts", topic=idea["topic"], facts=facts,
         hook=idea.get("hook", ""), language=narration_language(),
-    )
+    ), revision_note)
     out = generate_parsed("script", prompt, temperature=0.6).model_dump()
     # sync duration to actual narration length. Measured Kokoro pace ≈2.1
     # spoken words/sec (incl. pauses) — 2.5 underestimated by ~19% and let

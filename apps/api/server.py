@@ -433,19 +433,48 @@ def approve(pid: int, body: ApproveRequest | None = None):
 
 
 @app.post("/api/projects/{pid}/reject")
-def reject(pid: int, body: Decision):
+def reject(pid: int, body: Decision | None = None):
+    """Discard the video outright — no note, no second step."""
     db = get_db()
     p = db.get("projects", pid)
     if not p:
         raise HTTPException(404, "not found")
-    if not body.reason.strip():
-        db.update("projects", pid, status="FAILED")
-        return {"ok": True, "state": "FAILED"}
     if pid in _running or pid in _produce_queue.queue:
         raise HTTPException(409, "pipeline already running for this project")
-    db.update("projects", pid, status="EDITING")
+    db.update("projects", pid, status="FAILED")
+    return {"ok": True, "state": "FAILED"}
+
+
+def _clear_generated(pid: int) -> None:
+    """A revision regenerates everything downstream of the script; clips, audio
+    and renders from the rejected version must not leak into the new one."""
+    import shutil
+    from core.filesystem import project_dir
+    pdir = project_dir(pid)
+    for name in ("assets", "audio", "subtitles", "rendered"):
+        shutil.rmtree(pdir / name, ignore_errors=True)
+
+
+@app.post("/api/projects/{pid}/revise")
+def revise(pid: int, body: Decision):
+    """Regenerate the script, storyboard and video with the user's note wired
+    into the prompts — a revision loop, not a re-render of the same thing."""
+    db = get_db()
+    p = db.get("projects", pid)
+    if not p:
+        raise HTTPException(404, "not found")
+    note = body.reason.strip()
+    if not note:
+        raise HTTPException(422, "Revise needs a note saying what to change — "
+                                 "use Reject to discard the video.")
+    if pid in _running or pid in _produce_queue.queue:
+        raise HTTPException(409, "pipeline already running for this project")
+    from core.settings import set_setting
+    set_setting(f"project.{pid}.revision_note", note)
+    _clear_generated(pid)
+    db.update("projects", pid, status="SCRIPTING")
     _run_in_background(pid)
-    return {"ok": True, "state": "EDITING"}
+    return {"ok": True, "state": "SCRIPTING"}
 
 
 class ProduceRequest(BaseModel):

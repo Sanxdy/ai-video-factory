@@ -172,7 +172,15 @@ def build_stages(project_id: int) -> dict[State, callable]:
         return StageResult(stage=st, success=True, data=out)
 
     def stage_script(pid, st):
-        sid = generate_script(db, _resolve_idea_id(pid), project_id=pid)
+        from core.settings import get_setting, set_setting
+        # a revision note (set by POST /api/projects/{pid}/revise) drives exactly
+        # one regeneration: consumed here, carried to the storyboard via state
+        note = (get_setting(f"project.{pid}.revision_note") or "").strip()
+        if note:
+            set_setting(f"project.{pid}.revision_note", "")
+            state["revision_note"] = note
+        sid = generate_script(db, _resolve_idea_id(pid), project_id=pid,
+                              revision_note=note)
         state["script_id"] = sid
         # persist script id on project for resume (was 0 → broke resume)
         db.update("projects", pid, script_id=sid)
@@ -180,7 +188,8 @@ def build_stages(project_id: int) -> dict[State, callable]:
 
     def stage_storyboard(pid, st):
         sid = _resolve_script_id(pid)  # resume-safe: state dict is empty on retry
-        scene_ids = generate_storyboard(db, sid, project_id=pid)
+        scene_ids = generate_storyboard(db, sid, project_id=pid,
+                                        revision_note=state.get("revision_note", ""))
         state["script_id"] = sid
         return StageResult(stage=st, success=True, data={"scenes": len(scene_ids)})
 

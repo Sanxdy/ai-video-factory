@@ -169,7 +169,8 @@ def _persist_scenes(db: Database, script_id: int, script: dict,
     return scene_ids
 
 
-def generate_storyboard(db: Database, script_id: int, project_id: int | None = None) -> list[int]:
+def generate_storyboard(db: Database, script_id: int, project_id: int | None = None,
+                        revision_note: str = "") -> list[int]:
     # idempotent: retry/resume must not duplicate scene rows
     existing = db.all("scenes", "script_id=? ORDER BY scene_number", (script_id,))
     if existing:
@@ -217,6 +218,8 @@ def generate_storyboard(db: Database, script_id: int, project_id: int | None = N
         if sc:
             tpl["scene_count"] = sc
     prompt = render_prompt("storyboard", **tpl)
+    from apps.scripting.script_gen import revision_prompt
+    prompt = revision_prompt(prompt, revision_note)
     out = generate_parsed("storyboard", prompt).model_dump()
     scenes = out["scenes"]
 

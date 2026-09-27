@@ -429,8 +429,8 @@ export default function ProjectShell() {
             }}>
               <Icon d={ICONS.check} size={16} /> Approve &amp; upload
             </button>
-            <button className="btn btn-danger" onClick={() => setRejecting(!rejecting)}>
-              <Icon d={ICONS.x} size={16} /> Reject
+            <button className="btn btn-secondary" onClick={() => setRejecting(!rejecting)}>
+              <Icon d={ICONS.refresh} size={16} /> Revise / reject
             </button>
           </div>
           <div style={{ display: "grid", gap: "var(--space-3)",
@@ -496,15 +496,21 @@ export default function ProjectShell() {
               <span>What should change?</span>
               <input className="input" autoFocus placeholder="e.g. shorter hook, different visuals"
                      value={reason} onChange={(e) => setReason(e.target.value)} />
-              <p className="hint">Empty = discard this video entirely.</p>
+              <p className="hint">Revise regenerates the script, storyboard and video with
+                 your note. Reject discards the video entirely.</p>
               <div className="formrow" style={{ marginTop: "var(--space-2)" }}>
                 <button className="btn btn-secondary"
                         onClick={() => { setRejecting(false); setReason(""); }}>Keep it</button>
+                <button className="btn btn-primary" disabled={!reason.trim()} onClick={() => {
+                  setRejecting(false);
+                  act("revise", { reason });
+                  setReason("");
+                }}>Revise</button>
                 <button className="btn btn-danger" onClick={() => {
                   setRejecting(false);
-                  act("reject", { reason });
+                  act("reject");
                   setReason("");
-                }}>Confirm reject</button>
+                }}>Reject</button>
               </div>
             </div>
           )}
