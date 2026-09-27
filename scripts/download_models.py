@@ -18,6 +18,9 @@ def main() -> int:
         if verify_model(m["name"]):
             print(f"[have] {m['name']}")
             continue
+        if m.get("required") is False:
+            print(f"[skip] {m['name']} (optional — {m.get('description', '').split('.')[0].lower()})")
+            continue
         if m.get("status") == "fallback":
             print(f"[skip] {m['name']} (fallback — install only if needed)")
             continue

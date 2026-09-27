@@ -23,7 +23,8 @@ export type SystemInfo = {
   ram_total_mb: number;
   ram_free_mb: number;
   disk_free_gb: number;
-  models: { name: string; task?: string; status?: string; available: boolean }[];
+  models: { name: string; task?: string; status?: string; available: boolean;
+            required?: boolean; description?: string }[];
 };
 
 export function useSSE(onEvent: (e: MessageEvent) => void) {

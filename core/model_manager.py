@@ -66,6 +66,10 @@ def verify_model(name: str) -> bool:
     # pip-provided backends: the backing package is the real check
     pkgs = {"kokoro": "kokoro_onnx", "whisper": "faster_whisper",
             "mlx": "mlx", "video": None}
+    if backend == "piper":
+        # the engine ships with the app; a voice counts as present once any
+        # voice file has been fetched (they download per voice, on demand)
+        return any((data_dir() / "runtime" / "models" / "piper").glob("*.onnx"))
     pkg = pkgs.get(backend)
     if pkg:
         return importlib.util.find_spec(pkg) is not None

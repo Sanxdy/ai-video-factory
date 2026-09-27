@@ -1,30 +1,12 @@
-# Model capability registry (spec §3, §29).
-# status: primary | fallback | disabled — selected by hardware detector.
+# Model capability registry — only models AVF actually loads. A model belongs
+# here when pipeline code imports or downloads it; anything else (the old
+# ComfyUI image generation, MLX video generation) is not part of the product
+# and is not listed.
+#
+# status:   primary | fallback — which tier the task uses
+# required: true | false       — false models are optional: they install on
+#                                demand, and the UI explains what they are for
 models:
-  # ── Image (ComfyUI) ──────────────────────────────────
-  - name: sd-turbo
-    task: image
-    backend: comfyui
-    ram_requirement_gb: 3.0
-    disk_requirement_gb: 4.0
-    supported_resolutions: ["512x512", "576x1024", "768x768"]
-    quantization: fp16
-    apple_silicon: true
-    commercial_license: true
-    install_method: "comfyui model download"
-    status: primary
-  - name: sdxl-base
-    task: image
-    backend: comfyui
-    ram_requirement_gb: 6.0
-    disk_requirement_gb: 7.0
-    supported_resolutions: ["1024x1024", "1080x1920"]
-    quantization: fp16
-    apple_silicon: true
-    commercial_license: true
-    install_method: "comfyui model download"
-    status: fallback
-
   # ── TTS ──────────────────────────────────────────────
   - name: kokoro-82m
     task: tts
@@ -35,6 +17,26 @@ models:
     commercial_license: true
     install_method: "pip install kokoro-onnx"
     status: primary
+    required: true
+    description: >-
+      Narration (voice-over) for every video — 45 voices across English,
+      Spanish, French, Italian, Portuguese and Hindi. Weights (~310 MB)
+      download on first run.
+
+  - name: piper-voices
+    task: tts
+    backend: piper
+    ram_requirement_gb: 0.5
+    disk_requirement_gb: 0.3
+    apple_silicon: true
+    commercial_license: true
+    install_method: "automatic — fetched per voice on first use"
+    status: primary
+    required: false
+    description: >-
+      Native-accent voices for the languages Kokoro cannot speak — Indonesian,
+      German, French male. Fetched automatically (~20-60 MB each) the first
+      time you pick one of them in Settings → Voice.
 
   # ── STT ──────────────────────────────────────────────
   - name: whisper-small
@@ -45,18 +47,9 @@ models:
     apple_silicon: true
     commercial_license: true
     install_method: "pip install faster-whisper"
-    status: primary
-
-  # ── Video (optional, Mac only) ───────────────────────
-  - name: ltx-video-2b
-    task: video
-    backend: mlx
-    ram_requirement_gb: 12.0
-    disk_requirement_gb: 8.0
-    supported_resolutions: ["512x896", "576x1024"]
-    supported_durations: [3, 4, 5, 8]
-    quantization: q4
-    apple_silicon: true
-    commercial_license: true
-    install_method: "mlx-video"
-    status: disabled   # too heavy for VPS; candidate on Mac
+    status: fallback
+    required: false
+    description: >-
+      Fallback subtitles: transcribes the narration audio when the
+      script-locked subtitles cannot be built. Weights (~460 MB) download on
+      first use.

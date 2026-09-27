@@ -81,21 +81,23 @@ export default function SystemPage() {
       <div className="card table-card">
         <table className="table">
           <thead>
-            <tr><th>Model</th><th>Task</th><th>Role</th><th>Status</th></tr>
+            <tr><th>Model</th><th>What it is for</th><th>Status</th></tr>
           </thead>
           <tbody>
             {s.models.map((m) => (
               <tr key={m.name}>
-                <td style={{ fontWeight: 500 }}>{m.name}</td>
-                <td style={{ textTransform: "capitalize", color: "var(--color-muted)" }}>
-                  {m.task ?? "-"}
+                <td style={{ fontWeight: 500 }}>
+                  {m.name}
+                  <span className="td-sub">{m.task ?? "-"} · {m.status ?? "-"}</span>
                 </td>
-                <td style={{ textTransform: "capitalize", color: "var(--color-muted)" }}>
-                  {m.status ?? "-"}
+                <td style={{ color: "var(--color-muted)", maxWidth: 420 }}>
+                  {m.description ?? "-"}
                 </td>
                 <td>
                   {m.available ? (
                     <span className="badge badge-complete">Available</span>
+                  ) : m.required === false ? (
+                    <span className="badge badge-queued">Optional — installs on demand</span>
                   ) : (
                     <span className="badge badge-failed">Missing</span>
                   )}
