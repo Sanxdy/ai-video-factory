@@ -21,7 +21,7 @@ def generate_hooks(db: Database, idea_id: int) -> dict:
     prompt = render_prompt(
         "hooks", topic=idea["topic"],
         summary=json.dumps(research[:3]) if research else "",
-        language=narration_language(),
+        language=narration_language() or "the same language as the topic text (auto)",
     )
     out = generate_parsed("hooks", prompt, temperature=0.7).model_dump()
     # store best hook to the idea and return all
@@ -203,7 +203,8 @@ def generate_longform_script(db: Database, idea: dict, facts: str,
     for i, kind in enumerate(kinds):
         prompt = revision_prompt(render_prompt(
             "longform", topic=idea["topic"], facts=facts, section=kind,
-            index=i + 1, total=len(kinds), words=per[kind], language=narration_language(),
+            index=i + 1, total=len(kinds), words=per[kind],
+            language=narration_language() or "the same language as the topic text (auto)",
             written=" | ".join(written) or "(none yet)",
             rank_note=_rank_note(kind, ranks.get(kind), items),
             cta_examples=cta_examples,
@@ -262,7 +263,8 @@ def generate_script(db: Database, idea_id: int, project_id: int | None = None,
 
     prompt = revision_prompt(render_prompt(
         "scripts", topic=idea["topic"], facts=facts,
-        hook=idea.get("hook", ""), language=narration_language(),
+        hook=idea.get("hook", ""),
+        language=narration_language() or "the same language as the topic text (auto)",
     ), revision_note)
     out = generate_parsed("script", prompt, temperature=0.6).model_dump()
     # sync duration to actual narration length. Measured Kokoro pace ≈2.1

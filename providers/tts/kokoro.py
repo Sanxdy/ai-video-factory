@@ -47,29 +47,22 @@ VOICES: dict[str, tuple[str, ...]] = {
     "pt-br": ("pf_dora", "pm_alex", "pm_santa"),
 }
 
-# Languages Kokoro v1.0 was never trained on — there is no de_* or id_* voice
-# in voices-v1.0.bin (54 voices, enumerated). espeak-ng phonemizes both fine,
-# though, and an English voice reading those phonemes is accented but
-# intelligible: a Whisper round-trip (source text in, transcription of the
-# audio out) scored German 96% and Indonesian 86% against a 100% English
-# control. The exposed id carries the target language as an extra prefix, so
-# picker entries stay unique and the language survives the settings round-trip;
-# model_voice() strips it before the model lookup.
-BORROWED: dict[str, tuple[str, ...]] = {
-    "de": ("de_af_nova", "de_am_michael"),
-    "id": ("id_af_nova", "id_am_michael"),
-}
-
-_ALL_VOICES: dict[str, tuple[str, ...]] = {**VOICES, **BORROWED}
+# Languages Kokoro v1.0 was never trained on (German, Indonesian) used to be
+# served by "borrowed" English voices — intelligible on a Whisper round-trip,
+# but sounding English, which viewers hear immediately. They are gone: those
+# languages now come from Piper (providers/tts/piper.py), whose voices are
+# trained per language and accent it natively.
+_ALL_VOICES: dict[str, tuple[str, ...]] = {**VOICES}
 
 LANGUAGE_LABELS = {
     "en-us": "English (US)", "en-gb": "English (UK)", "es": "Spanish",
     "fr-fr": "French", "hi": "Hindi", "it": "Italian",
-    "pt-br": "Portuguese (Brazil)", "de": "German (experimental)",
-    "id": "Indonesian (experimental)",
+    "pt-br": "Portuguese (Brazil)",
 }
 
-# espeak language code → the language name the LLM prompts ask for.
+# espeak language code → the language name the LLM prompts ask for. The
+# two-letter Piper codes ("id", "de") sit in the same table: language_for_voice
+# returns them for piper: ids, and narration_language() names the language.
 PROMPT_LANGUAGE = {
     "en-us": "English", "en-gb": "English", "es": "Spanish", "fr-fr": "French",
     "hi": "Hindi", "it": "Italian", "pt-br": "Portuguese (Brazil)",
@@ -80,11 +73,74 @@ PROMPT_LANGUAGE = {
 # one: synth() never had a language argument and still does not need one.
 _LANG_BY_PREFIX = {v[:2]: lang for lang, ids in _ALL_VOICES.items() for v in ids}
 
+# AUTO voices: the video follows its text. The topic is Indonesian → the script
+# is written in Indonesian and an Indonesian voice reads it; French topic →
+# French. The user only picks the gender. Resolved per project in
+# stage_script once the script's language is known (langdetect on the body).
+AUTO_GROUP = "Auto — follows the video's language"
+AUTO_VOICE_NAMES = {
+    "en": ("Heart", "Michael"), "en-gb": ("Alice", "Daniel"),
+    "es": ("Dora", "Alex"), "fr": ("Siwis", "Gilles"),
+    "de": ("Ramona", "Thorsten"), "id": ("News reader", "News reader"),
+    "it": ("Sara", "Nicola"), "pt": ("Dora", "Alex"), "hi": ("Alpha", "Omega"),
+}
+AUTO_DEFAULT_LANGUAGE = "en"
+
+# language → (female voice id, male voice id). Kokoro where it is native,
+# Piper where only Piper has the language, and for French's male voice
+# (Kokoro ships exactly one French voice, and she is female).
+AUTO_VOICE_MAP: dict[str, tuple[str, str]] = {
+    "en": ("af_heart", "am_michael"),
+    "es": ("ef_dora", "em_alex"),
+    "fr": ("ff_siwis", "piper:fr_FR-gilles-low"),
+    "de": ("piper:de_DE-ramona-low", "piper:de_DE-thorsten-medium"),
+    "id": ("piper:id_ID-news_tts-medium", "piper:id_ID-news_tts-medium"),
+    "it": ("if_sara", "im_nicola"),
+    "pt": ("pf_dora", "pm_alex"),
+    "hi": ("hf_alpha", "hm_omega"),
+}
+
+# ids that existed before Piper (the borrowed de/id English voices). A setting
+# still holding one is translated at read time to its native-accent successor —
+# the closest voice to what the user picked, in the language they wanted.
+LEGACY_VOICE_MAP: dict[str, str] = {
+    "de_af_nova": "piper:de_DE-ramona-low",
+    "de_am_michael": "piper:de_DE-thorsten-medium",
+    "id_af_nova": "piper:id_ID-news_tts-medium",
+    "id_am_michael": "piper:id_ID-news_tts-medium",
+}
+
+
+def resolve_auto_voice(voice: str, text: str) -> str:
+    """The concrete voice for an auto-* id, chosen by the text's language.
+
+    Runs on the finished script (a paragraph or two — far more reliable than
+    a two-word topic). Anything the detector cannot place falls back to
+    English, and a non-auto id passes through untouched.
+    """
+    if voice not in ("auto-female", "auto-male"):
+        return voice
+    gender = 0 if voice == "auto-female" else 1
+    lang = AUTO_DEFAULT_LANGUAGE
+    try:
+        from langdetect import DetectorFactory, detect
+        DetectorFactory.seed = 0  # deterministic: same script → same voice
+        lang = detect(text)
+    except Exception:
+        pass
+    pair = AUTO_VOICE_MAP.get(lang)
+    if pair is None:
+        log.info("auto voice: langdetect said '%s' — no voices for it, using English", lang)
+        pair = AUTO_VOICE_MAP[AUTO_DEFAULT_LANGUAGE]
+    else:
+        log.info("auto voice: script language '%s' → %s", lang, pair[gender])
+    return pair[gender]
+
 
 def model_voice(voice: str) -> str:
     """The voice id the model actually knows.
 
-    Borrowed-language ids carry their language as an extra prefix
+    Borrowed-language ids carried their language as an extra prefix
     ("de_am_michael"); the model has no such entry, only "am_michael". Native
     ids pass through untouched.
     """
@@ -92,44 +148,61 @@ def model_voice(voice: str) -> str:
     return "_".join(parts[1:]) if len(parts) > 2 else voice
 
 
-def narration_language() -> str:
+def narration_language() -> str | None:
     """The language the LLM must WRITE the narration in: the voice's.
 
     A Spanish voice reading an English script is not a Spanish video — espeak
     mangles English words into the target language's phonemes, and the Whisper
     round-trip scores that at 59-86% versus 96% for a script written in the
     voice's own language. Every narration-writing prompt takes this.
+
+    With an auto voice the video's language follows the topic instead, so this
+    returns None and the prompt says so — the concrete voice is resolved after
+    the script exists (resolve_auto_voice).
     """
     from core.settings import get_setting
     voice = (get_setting("tts.voice")
              or (config.get("tts", default={}) or {}).get("voice", "af_heart"))
+    if voice in ("auto-female", "auto-male"):
+        return None
     return PROMPT_LANGUAGE.get(language_for_voice(voice), "English")
 
 
 def voice_options() -> list[dict[str, str]]:
     """Flat {id, label, group} list for the settings API and the wizard.
 
-    `group` is the language heading the UI shows as an <optgroup>, so the 45
-    voices read as nine short lists instead of one long one. Name and gender
-    come from the trailing segments, so borrowed ids ("de_am_michael") label
-    exactly like native ones ("am_michael").
+    `group` is the language heading the UI shows as an <optgroup>. The two
+    auto voices come first, then Kokoro's native languages, then Piper's —
+    each piper id groups under a "<Language> (native)" heading.
     """
-    out = []
+    from providers.tts.piper import VOICES as PIPER_VOICES
+
+    out = [{"id": "auto-female", "group": AUTO_GROUP, "label": "Auto (female)"},
+           {"id": "auto-male", "group": AUTO_GROUP, "label": "Auto (male)"}]
     for lang, ids in _ALL_VOICES.items():
         for v in ids:
             parts = v.split("_")
             gender = "female" if parts[-2][1] == "f" else "male"
             out.append({"id": v, "group": LANGUAGE_LABELS[lang],
                         "label": f"{parts[-1].capitalize()} ({gender})"})
+    for key, entry in PIPER_VOICES.items():
+        out.append({"id": f"piper:{key}",
+                    "group": f"{entry['lang'].capitalize()} (native)",
+                    "label": f"{entry['name']} ({entry['gender']})"})
     return out
 
 
 def voice_ids() -> set[str]:
-    return {v for ids in _ALL_VOICES.values() for v in ids}
+    return {o["id"] for o in voice_options()}
 
 
 def language_for_voice(voice: str) -> str:
     """espeak language for a voice id; unknown prefixes fall back to English."""
+    if voice.startswith("piper:"):
+        from providers.tts.piper import language_for_voice as piper_lang
+        return piper_lang(voice) or "en-us"
+    if voice in ("auto-female", "auto-male"):
+        return f"{AUTO_DEFAULT_LANGUAGE}-us" if AUTO_DEFAULT_LANGUAGE == "en" else AUTO_DEFAULT_LANGUAGE
     return _LANG_BY_PREFIX.get(voice[:2], "en-us")
 
 
@@ -161,11 +234,24 @@ def _espeak_data_dir() -> Path:
 
 
 class KokoroTTS:
-    def __init__(self, voice: str | None = None, speed: float | None = None):
+    """The TTS facade every caller uses, despite the name.
+
+    Voices starting with "piper:" route to the Piper engine (native accents
+    for languages Kokoro cannot do); everything else stays Kokoro.
+    """
+
+    def __init__(self, voice: str | None = None, speed: float | None = None,
+                 voice_override: str | None = None):
         tts_cfg = config.get("tts", default={}) or {}
         from core.settings import get_setting
-        # runtime setting (Settings UI) wins over explicit arg over app.yaml
-        self.voice = (get_setting("tts.voice") or voice
+        # a per-project override (an auto voice resolved to the script's
+        # language) wins; then the runtime setting (with pre-Piper borrowed ids
+        # translated to their native-accent successors), the explicit arg, app.yaml
+        stored = LEGACY_VOICE_MAP.get(get_setting("tts.voice") or "",
+                                      get_setting("tts.voice"))
+        self.voice = (voice_override
+                      or stored
+                      or voice
                       or tts_cfg.get("voice", "af_heart"))
         self.language = language_for_voice(self.voice)
         self.speed = speed if speed is not None else tts_cfg.get("speed", 1.0)
@@ -174,6 +260,8 @@ class KokoroTTS:
 
     def available(self) -> bool:
         """Both backends probed; True if at least one works."""
+        if self.voice.startswith("piper:"):
+            return True
         if shutil.which("kokoro"):
             self._mlx_ok = True
             return True
@@ -194,6 +282,11 @@ class KokoroTTS:
         """
         out_path = Path(out_path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if self.voice.startswith("piper:"):
+            from providers.tts.piper import PiperTTS
+            return PiperTTS(self.voice, speed=self.speed).synth(text, out_path)
+
         lang = language or self.language
 
         self.available()  # ensure flags set in this process

@@ -182,6 +182,18 @@ def build_stages(project_id: int) -> dict[State, callable]:
         sid = generate_script(db, _resolve_idea_id(pid), project_id=pid,
                               revision_note=note)
         state["script_id"] = sid
+        # an auto voice resolves NOW: the script's text is what determines the
+        # video's language, and the voice has to match it. Stored per project so
+        # stage_audio's TTS uses it and a resume re-resolves identically.
+        from providers.tts.kokoro import resolve_auto_voice
+        script_row = db.get("scripts", sid) or {}
+        spoken = " ".join(filter(None, (script_row.get("hook"),
+                                        script_row.get("body"),
+                                        script_row.get("cta"))))
+        if spoken.strip():
+            set_setting(f"project.{pid}.voice",
+                        resolve_auto_voice(get_setting("tts.voice") or "auto-female",
+                                           spoken))
         # persist script id on project for resume (was 0 → broke resume)
         db.update("projects", pid, script_id=sid)
         return StageResult(stage=st, success=True, data={"script_id": sid})

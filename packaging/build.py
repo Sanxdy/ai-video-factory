@@ -302,28 +302,35 @@ def _style_dmg_volume(mount: Path, app: str) -> None:
                         "00" * 8 + "0400" + "00" * 22, str(mount)],
                        capture_output=True)
 
-    bg = mount / ".background" / "background.png"
+    bg = mount / ".background.png"
     alias = mac_alias.Alias.for_file(str(bg)).to_bytes()
     with DSStore.open(str(mount / ".DS_Store"), "w+") as d:
         d["."]["bwsp"] = {
             "ContainerShowSidebar": False, "PreviewPaneVisibility": False,
             "ShowPathbar": False, "ShowSidebar": False, "ShowStatusBar": False,
             "ShowTabView": False, "ShowToolbar": False, "SidebarWidth": 180,
-            "WindowBounds": "{{240, 140}, {1040, 720}}",
+            "WindowBounds": "{{400, 530}, {540, 380}}",
         }
         d["."]["icvl"] = (b"type", b"icnv")
+        # the field set mirrors a working installer DMG record for record —
+        # backgroundType in particular: 2 means "picture", 1 is ignored by
+        # Finder (the background silently never draws), 0 is the plain colour
         d["."]["icvp"] = {
-            "arrangeBy": "none", "backgroundType": 1,
-            "backgroundColorRed": 247 / 255, "backgroundColorGreen": 247 / 255,
-            "backgroundColorBlue": 246 / 255,
+            "arrangeBy": "none", "backgroundType": 2,
+            "backgroundColorRed": 1.0, "backgroundColorGreen": 1.0,
+            "backgroundColorBlue": 1.0,
             "backgroundImageAlias": alias,
-            "gridSpacing": 100, "iconSize": 104, "textSize": 15,
-            "showItemInfo": False, "labelOnBottom": True,
+            "gridOffsetX": 0.0, "gridOffsetY": 0.0,
+            "gridSpacing": 100.0, "iconSize": 80.0, "textSize": 12.0,
+            "showItemInfo": False, "showIconPreview": False,
+            "labelOnBottom": True,
+            "scrollPositionX": 0.0, "scrollPositionY": 0.0,
+            "viewOptionsVersion": 1,
         }
         d["."]["vSrn"] = (b"long", 1)
         # positions match the dashed arrow drawn into packaging/dmg-background.png
-        d[app]["Iloc"] = (230, 430)
-        d["Applications"]["Iloc"] = (700, 430)
+        d[app]["Iloc"] = (130, 220)
+        d["Applications"]["Iloc"] = (410, 220)
 
 
 def _app_version() -> str:
@@ -352,9 +359,8 @@ def dmg(stage: Path, app: str, out: Path) -> Path:
     work.mkdir(parents=True)
     shutil.copytree(stage / app, work / app, symlinks=True)
     (work / "Applications").symlink_to("/Applications")
-    bg = work / ".background"
-    bg.mkdir()
-    shutil.copy2(REPO / "packaging" / "dmg-background.png", bg / "background.png")
+    # hidden file at the volume root, the layout proven installers use
+    shutil.copy2(REPO / "packaging" / "dmg-background.png", work / ".background.png")
 
     tmp = OUT / "avf-styling.dmg"
     tmp.unlink(missing_ok=True)

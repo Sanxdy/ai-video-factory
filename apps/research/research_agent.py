@@ -47,7 +47,7 @@ def research_idea(db: Database, idea_id: int) -> dict:
     if not idea:
         raise ValueError(f"idea {idea_id} not found")
     prompt = render_prompt("research", topic=idea["topic"],
-                        language=narration_language())
+                        language=narration_language() or "the same language as the topic text (auto)")
     out = generate_parsed("research", prompt).model_dump()
     out["facts"] = _enforce_named_sources(out["facts"])
     db.insert("research", idea_id=idea_id, summary=out["summary"],

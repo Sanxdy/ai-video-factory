@@ -708,19 +708,41 @@ def mix_preview(track: str = "", voice_volume: int = 80, music_volume: int = 40)
 @app.get("/api/tts/preview")
 def tts_preview(voice: str = "", text: str = ""):
     """Short voice sample for the Settings voice picker (~3s, cached)."""
-    from providers.tts.kokoro import KokoroTTS, voice_ids
+    from providers.tts.kokoro import KokoroTTS, language_for_voice, resolve_auto_voice, voice_ids
+    from providers.tts.piper import VOICES as PIPER_VOICES
     if voice and voice not in voice_ids():
         raise HTTPException(422, f"unknown voice '{voice}'")
-    sample = text.strip()[:200] or (
-        "The world's most expensive car cost twenty eight million dollars. "
-        "Here is what makes it worth that price.")
+    # each language hears its own sentence: an Indonesian voice must preview as
+    # Indonesian, or the picker cannot show what the accent is actually like
+    samples = {
+        "en": "The world's most expensive car cost twenty eight million dollars. "
+              "Here is what makes it worth that price.",
+        "id": "Mobil termahal di dunia harganya dua puluh delapan juta dolar. "
+              "Inilah yang membuat harganya sebesar itu.",
+        "de": "Das teuerste Auto der Welt kostete achtundzwanzig Millionen Dollar. "
+              "Das ist der Grund für diesen Preis.",
+        "es": "El coche más caro del mundo costó veintiocho millones de dólares. "
+              "Esto es lo que justifica su precio.",
+        "fr": "La voiture la plus chère du monde coûtait vingt-huit millions de "
+              "dollars. Voici ce qui justifie ce prix.",
+        "it": "L'auto più costosa al mondo costava ventotto milioni di dollari. "
+              "Ecco cosa giustifica quel prezzo.",
+    }
+    lang = language_for_voice(voice) if voice else "en"
+    lang = (lang or "en")[:2]
+    sample = text.strip()[:200] or samples.get(lang, samples["en"])
     v = voice or KokoroTTS().voice
+    # an auto voice previews as the concrete voice for the sample's language
+    if v in ("auto-female", "auto-male"):
+        v = resolve_auto_voice(v, sample)
+    if v.startswith("piper:") and v not in PIPER_VOICES:
+        raise HTTPException(422, f"unknown voice '{voice}'")
     cache = data_dir() / "content" / "cache" / f"voice-preview-{v}.wav"
     cache.parent.mkdir(parents=True, exist_ok=True)
     if not cache.exists():
         try:
-            # the sample is English, so a non-English voice reads it in its own
-            # accent — which is the point: you hear the voice you are choosing
+            # the sample is written in the voice's own language, so you hear
+            # exactly the accent you are choosing
             KokoroTTS(voice=v).synth(sample, cache)
         except Exception as e:
             raise HTTPException(503, f"TTS unavailable: {str(e)[:150]}")
@@ -1437,8 +1459,11 @@ class VoiceSettings(BaseModel):
 @app.get("/api/settings/voice")
 def get_voice_settings():
     from core.settings import get_setting
-    from providers.tts.kokoro import KokoroTTS, voice_options
-    return {"voice": get_setting("tts.voice") or KokoroTTS().voice,
+    from providers.tts.kokoro import (KokoroTTS, LEGACY_VOICE_MAP,
+                                      voice_options)
+    stored = LEGACY_VOICE_MAP.get(get_setting("tts.voice") or "",
+                                  get_setting("tts.voice"))
+    return {"voice": stored or KokoroTTS().voice,
             "voices": voice_options()}
 
 @app.post("/api/settings/voice")

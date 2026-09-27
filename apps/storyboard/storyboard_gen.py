@@ -203,7 +203,7 @@ def generate_storyboard(db: Database, script_id: int, project_id: int | None = N
         "body": script["body"] or "",
         "cta": script["cta"] or "",
         "duration": script["duration"] or 40,
-        "language": narration_language(),
+        "language": narration_language() or "the same language as the narration (auto)",
         "scene_count": "6-8",
         "max_scene_duration": "8",
         "max_scene_duration_scene_words": "20",

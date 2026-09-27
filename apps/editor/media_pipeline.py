@@ -45,7 +45,10 @@ def produce_video(project_id: int, scenes: list[dict], out_root: Path | None = N
     # 1. per-scene assets
     w, h = dims(ratio)
     img_prov = ImageProvider(f"{w}x{h}")
-    tts = KokoroTTS()
+    from core.settings import get_setting
+    # an auto voice was resolved to the script's language in stage_script and
+    # stored per project — it must win over the global tts.voice setting
+    tts = KokoroTTS(voice_override=get_setting(f"project.{project_id}.voice"))
     clips: list[Path] = []
     narration_clips: list[Path | None] = []
     timeline: list[dict] = []

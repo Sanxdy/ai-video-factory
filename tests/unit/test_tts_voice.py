@@ -43,45 +43,17 @@ def test_espeak_data_path_stays_under_the_crash_threshold(monkeypatch, tmp_path)
     assert len(str(d.resolve())) <= 159
 
 
-def test_borrowed_language_voices():
-    """German and Indonesian ride English voices under a language prefix.
-
-    Kokoro v1.0 ships 54 voices and none of them speaks de or id — espeak-ng
-    phonemizes both, so an English voice reads the target phonemes. The exposed
-    id carries the language ("de_am_michael") so the picker stays unique and the
-    language survives the settings round-trip; model_voice() strips it for the
-    model lookup.
-    """
-    from providers.tts.kokoro import (language_for_voice, model_voice,
-                                      narration_language, voice_ids,
-                                      voice_options)
-    ids = voice_ids()
-    assert {"de_af_nova", "de_am_michael", "id_af_nova", "id_am_michael"} <= ids
-    assert "am_michael" in ids and "af_heart" in ids      # natives untouched
-
-    assert model_voice("de_am_michael") == "am_michael"
-    assert model_voice("am_michael") == "am_michael"      # native passthrough
-    assert language_for_voice("de_am_michael") == "de"
-    assert language_for_voice("id_am_michael") == "id"
-    assert language_for_voice("am_michael") == "en-us"    # no prefix collision
-
-    opts = {o["id"]: o for o in voice_options()}
-    assert opts["de_am_michael"]["group"] == "German (experimental)"
-    assert opts["de_am_michael"]["label"] == "Michael (male)"
-    assert opts["id_af_nova"]["label"] == "Nova (female)"
-    assert opts["af_heart"]["label"] == "Heart (female)"  # native labels intact
-
-
 def test_narration_language_follows_the_voice(client, monkeypatch):
     """The script prompts must ask for the language the voice speaks: an
-    Indonesian voice reading an English script is espeak mangling English into
-    Indonesian phonemes."""
+    English voice reading an Indonesian script is espeak mangling English into
+    Indonesian phonemes. Piper's de/id voices are native — the language they
+    speak must flow into the prompts the same way Kokoro's do."""
     from providers.tts.kokoro import narration_language
     assert client.post("/api/settings/voice",
-                       json={"voice": "id_am_michael"}).status_code == 200
+                       json={"voice": "piper:id_ID-news_tts-medium"}).status_code == 200
     assert narration_language() == "Indonesian"
     assert client.post("/api/settings/voice",
-                       json={"voice": "de_am_michael"}).status_code == 200
+                       json={"voice": "piper:de_DE-thorsten-medium"}).status_code == 200
     assert narration_language() == "German"
     assert client.post("/api/settings/voice",
                        json={"voice": "ef_dora"}).status_code == 200
@@ -89,3 +61,7 @@ def test_narration_language_follows_the_voice(client, monkeypatch):
     assert client.post("/api/settings/voice",
                        json={"voice": "af_heart"}).status_code == 200
     assert narration_language() == "English"
+    # an auto voice has no fixed language — the topic's text decides
+    assert client.post("/api/settings/voice",
+                       json={"voice": "auto-female"}).status_code == 200
+    assert narration_language() is None
