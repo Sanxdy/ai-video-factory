@@ -684,12 +684,14 @@ def mix_preview(track: str = "", voice_volume: int = 80, music_volume: int = 40)
             404, f"no music bed '{track}' — pick another bed or add an .mp3 to "
                  f"the music folder shown in Settings → Audio")
     from providers.tts.kokoro import KokoroTTS
-    v = KokoroTTS().voice
+    v = KokoroTTS().voice.replace(":", "_")
     vo = data_dir() / "content" / "cache" / f"voice-preview-{v}.wav"
     if not vo.exists():
         vo.parent.mkdir(parents=True, exist_ok=True)
         try:
-            KokoroTTS(voice=v).synth(
+            # override, not voice=: the mix must demo the CURRENT setting even
+            # though KokoroTTS prefers a stored setting over constructor args
+            KokoroTTS(voice_override=v).synth(
                 "The world's most expensive car cost twenty eight million dollars. "
                 "Here is what makes it worth that price.", vo)
         except Exception as e:
@@ -709,7 +711,7 @@ def mix_preview(track: str = "", voice_volume: int = 80, music_volume: int = 40)
 def tts_preview(voice: str = "", text: str = ""):
     """Short voice sample for the Settings voice picker (~3s, cached)."""
     from providers.tts.kokoro import KokoroTTS, language_for_voice, resolve_auto_voice, voice_ids
-    from providers.tts.piper import VOICES as PIPER_VOICES
+    from providers.tts.piper import VOICES as PIPER_VOICES, is_cached as piper_is_cached
     if voice and voice not in voice_ids():
         raise HTTPException(422, f"unknown voice '{voice}'")
     # each language hears its own sentence: an Indonesian voice must preview as
@@ -727,6 +729,10 @@ def tts_preview(voice: str = "", text: str = ""):
               "dollars. Voici ce qui justifie ce prix.",
         "it": "L'auto più costosa al mondo costava ventotto milioni di dollari. "
               "Ecco cosa giustifica quel prezzo.",
+        "pt": "O carro mais caro do mundo custou vinte e oito milhões de dólares. "
+              "É isto que justifica o preço.",
+        "hi": "दुनिया की सबसे महंगी कार अट्ठाईस करोड़ डॉलर में बिकी थी। "
+              "यही कारण है इसकी इतनी कीमत का।",
     }
     lang = language_for_voice(voice) if voice else "en"
     lang = (lang or "en")[:2]
@@ -735,18 +741,32 @@ def tts_preview(voice: str = "", text: str = ""):
     # an auto voice previews as the concrete voice for the sample's language
     if v in ("auto-female", "auto-male"):
         v = resolve_auto_voice(v, sample)
-    if v.startswith("piper:") and v not in PIPER_VOICES:
+    if v.startswith("piper:") and v.removeprefix("piper:") not in PIPER_VOICES:
         raise HTTPException(422, f"unknown voice '{voice}'")
-    cache = data_dir() / "content" / "cache" / f"voice-preview-{v}.wav"
+    safe = v.replace(":", "_")
+    cache = data_dir() / "content" / "cache" / f"voice-preview-{safe}.wav"
     cache.parent.mkdir(parents=True, exist_ok=True)
+    if v.startswith("piper:") and not piper_is_cached(v.removeprefix("piper:")):
+        # a first-time piper voice downloads 20-60 MB, and the model host
+        # rate-limits with a minutes-long cooldown — fetching inline would
+        # hang the request. Start it in the background; the next press plays.
+        import threading
+        from providers.tts.piper import ensure_model
+        threading.Thread(target=ensure_model, args=(v.removeprefix("piper:"),),
+                         daemon=True).start()
+        raise HTTPException(503, f"Voice '{v}' is downloading (~20-60 MB, "
+                                 f"first use only) — press preview again in a minute")
     if not cache.exists():
         try:
             # the sample is written in the voice's own language, so you hear
-            # exactly the accent you are choosing
-            KokoroTTS(voice=v).synth(sample, cache)
+            # exactly the accent you are choosing. voice_override is the whole
+            # point: the global tts.voice setting must never leak into a
+            # preview of a DIFFERENT voice (that is how Jessica came out
+            # sounding French).
+            KokoroTTS(voice_override=v).synth(sample, cache)
         except Exception as e:
             raise HTTPException(503, f"TTS unavailable: {str(e)[:150]}")
-    return FileResponse(cache, media_type="audio/wav", filename=f"{v}.wav")
+    return FileResponse(cache, media_type="audio/wav", filename=f"{safe}.wav")
 
 
 class MusicRequest(BaseModel):

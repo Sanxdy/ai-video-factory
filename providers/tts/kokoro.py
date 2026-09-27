@@ -196,7 +196,7 @@ def voice_options() -> list[dict[str, str]]:
                         "label": f"{parts[-1].capitalize()} ({gender})"})
     for key, entry in PIPER_VOICES.items():
         out.append({"id": f"piper:{key}",
-                    "group": f"{entry['lang'].capitalize()} (native)",
+                    "group": f"{entry['lang_label']} (native)",
                     "label": f"{entry['name']} ({entry['gender']})"})
     return out
 

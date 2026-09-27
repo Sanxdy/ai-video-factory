@@ -38,8 +38,8 @@ def test_piper_voices_are_native_grouped():
     assert "piper:id_ID-news_tts-medium" in ids
     assert "piper:de_DE-thorsten-medium" in ids
     groups = {o["id"]: o["group"] for o in voice_options()}
-    assert groups["piper:id_ID-news_tts-medium"] == "Id (native)"
-    assert groups["piper:de_DE-thorsten-medium"] == "De (native)"
+    assert groups["piper:id_ID-news_tts-medium"] == "Indonesian (native)"
+    assert groups["piper:de_DE-thorsten-medium"] == "German (native)"
 
 
 def test_every_mapped_auto_voice_exists():
