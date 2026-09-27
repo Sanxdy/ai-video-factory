@@ -215,8 +215,13 @@ def main() -> int:
     # background_color matches the splash: before any HTML paints, WKWebView
     # shows the window background — white unless told otherwise, which read as
     # "the app was just there, no splash".
+    # text_select matters: pywebview's default (False) injects
+    # body { user-select: none } into every page, so nothing in the console can
+    # be selected and copy dies with it. This is a text tool — URLs, scripts,
+    # keys all get copied out of it.
     window = webview.create_window(TITLE, html=SPLASH, width=1440, height=900,
                                    min_size=(1024, 640),
+                                   text_select=True,
                                    background_color="#0A0D12")
     # pywebview blocks <a download> unless told otherwise, and the UI's entire
     # output path is three of those links: video, subtitles, thumbnail. Links
