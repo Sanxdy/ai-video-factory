@@ -309,21 +309,27 @@ def _style_dmg_volume(mount: Path, app: str) -> None:
             "ContainerShowSidebar": False, "PreviewPaneVisibility": False,
             "ShowPathbar": False, "ShowSidebar": False, "ShowStatusBar": False,
             "ShowTabView": False, "ShowToolbar": False, "SidebarWidth": 180,
-            "WindowBounds": "{{260, 200}, {660, 420}}",
+            "WindowBounds": "{{240, 140}, {1040, 720}}",
         }
         d["."]["icvl"] = (b"type", b"icnv")
         d["."]["icvp"] = {
             "arrangeBy": "none", "backgroundType": 1,
-            "backgroundColorRed": 10 / 255, "backgroundColorGreen": 13 / 255,
-            "backgroundColorBlue": 18 / 255,
+            "backgroundColorRed": 247 / 255, "backgroundColorGreen": 247 / 255,
+            "backgroundColorBlue": 246 / 255,
             "backgroundImageAlias": alias,
-            "gridSpacing": 100, "iconSize": 96, "textSize": 13,
+            "gridSpacing": 100, "iconSize": 104, "textSize": 15,
             "showItemInfo": False, "labelOnBottom": True,
         }
         d["."]["vSrn"] = (b"long", 1)
-        # positions match the slots drawn into packaging/dmg-background.png
-        d[app]["Iloc"] = (160, 240)
-        d["Applications"]["Iloc"] = (470, 240)
+        # positions match the dashed arrow drawn into packaging/dmg-background.png
+        d[app]["Iloc"] = (230, 430)
+        d["Applications"]["Iloc"] = (700, 430)
+
+
+def _app_version() -> str:
+    import tomllib
+    with open(REPO / "pyproject.toml", "rb") as f:
+        return tomllib.load(f)["project"]["version"]
 
 
 def dmg(stage: Path, app: str, out: Path) -> Path:
@@ -353,18 +359,22 @@ def dmg(stage: Path, app: str, out: Path) -> Path:
     tmp = OUT / "avf-styling.dmg"
     tmp.unlink(missing_ok=True)
     out.unlink(missing_ok=True)
-    sh(["hdiutil", "create", "-volname", "AVF", "-srcfolder", str(work),
+    volname = f"AVF {_app_version()}-arm64"
+    sh(["hdiutil", "create", "-volname", volname, "-srcfolder", str(work),
         "-ov", "-format", "UDRW", str(tmp)])
-    mount = OUT / "dmg-mount"
-    shutil.rmtree(mount, ignore_errors=True)
-    mount.mkdir()
-    sh(["hdiutil", "attach", str(tmp), "-mountpoint", str(mount),
-        "-nobrowse", "-quiet"])
+    # Style the volume at its real mount point. The background alias records
+    # where the volume lived when the .DS_Store was written — a temporary
+    # mount dir leaves that path baked in, and Finder on the user's machine
+    # fails to resolve it, so the background silently never draws. Mounted at
+    # /Volumes/<volname> the alias points where every user's mount lands too.
+    mount = Path("/Volumes") / volname
+    if mount.exists() and not any(mount.iterdir()):
+        mount.rmdir()  # stale empty dir from a crashed build would force "... 1"
+    sh(["hdiutil", "attach", str(tmp), "-nobrowse", "-quiet"])
     try:
         _style_dmg_volume(mount, app)
     finally:
         sh(["hdiutil", "detach", str(mount), "-quiet"])
-        shutil.rmtree(mount, ignore_errors=True)
     sh(["hdiutil", "convert", str(tmp), "-format", "UDZO", "-o", str(out)])
     tmp.unlink(missing_ok=True)
     shutil.rmtree(work, ignore_errors=True)
