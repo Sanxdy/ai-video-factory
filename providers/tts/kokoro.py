@@ -115,22 +115,31 @@ def resolve_auto_voice(voice: str, text: str) -> str:
     """The concrete voice for an auto-* id, chosen by the text's language.
 
     Runs on the finished script (a paragraph or two — far more reliable than
-    a two-word topic). Anything the detector cannot place falls back to
-    English, and a non-auto id passes through untouched.
+    a two-word topic). The detector is restricted to the languages AVF has
+    voices for; anything it cannot place falls back to English, and a non-auto
+    id passes through untouched.
     """
     if voice not in ("auto-female", "auto-male"):
         return voice
     gender = 0 if voice == "auto-female" else 1
     lang = AUTO_DEFAULT_LANGUAGE
     try:
-        from langdetect import DetectorFactory, detect
-        DetectorFactory.seed = 0  # deterministic: same script → same voice
-        lang = detect(text)
+        from lingua import Language, LanguageDetectorBuilder
+        detector = LanguageDetectorBuilder.from_languages(
+            *[l for l in (Language.ENGLISH, Language.GERMAN, Language.FRENCH,
+                          Language.SPANISH, Language.ITALIAN,
+                          Language.PORTUGUESE, Language.HINDI,
+                          Language.INDONESIAN)
+              if AUTO_VOICE_MAP.get(l.iso_code_639_1.name.lower())]
+        ).build()
+        detected = detector.detect_language_of(text)
+        if detected is not None:
+            lang = detected.iso_code_639_1.name.lower()
     except Exception:
         pass
     pair = AUTO_VOICE_MAP.get(lang)
     if pair is None:
-        log.info("auto voice: langdetect said '%s' — no voices for it, using English", lang)
+        log.info("auto voice: language '%s' has no voices — using English", lang)
         pair = AUTO_VOICE_MAP[AUTO_DEFAULT_LANGUAGE]
     else:
         log.info("auto voice: script language '%s' → %s", lang, pair[gender])
