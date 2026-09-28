@@ -94,7 +94,11 @@ TARGETS: dict[str, dict] = {
         "site": "python/Lib/site-packages",
         "python": "python\\pythonw.exe",  # no console window; see LAUNCHERS
         "ffmpeg": [
-            ("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
+            # the GitHub release asset of the same build gyan.dev's "release"
+            # alias pointed at when the SHA was pinned (byte-identical: 60f4…
+            # matches); gyan.dev itself serves it at dial-up speed
+            ("https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/"
+             "ffmpeg-9.0.2-essentials_build.zip",
              "60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba"),
         ],
         "forbid": (".dylib", ".so"),
@@ -399,6 +403,107 @@ def dmg(stage: Path, app: str, out: Path) -> Path:
     return out
 
 
+WEBVIEW2_BOOTSTRAP_URL = "https://go.microsoft.com/fwlink/?linkid=2124703"
+
+
+def compile_win_launcher(stage: Path) -> None:
+    """AVF.exe: a 38 KB launcher so no Windows user ever meets a .bat.
+
+    Cross-compiled with mingw-w64 (brew install mingw-w64): pythonw.exe runs
+    with no console flash, AVF's icon is embedded, and the process waits so a
+    taskbar pin behaves like an app. Without mingw the .bat stays the launcher
+    and every other artifact still builds.
+    """
+    windres = shutil.which("x86_64-w64-mingw32-windres")
+    gcc = shutil.which("x86_64-w64-mingw32-gcc")
+    if not (windres and gcc):
+        print("  (mingw-w64 not installed — keeping AVF.bat as the launcher)")
+        return
+    obj = OUT / "win-launcher.o"
+    sh([windres, str(REPO / "packaging" / "win-launcher.rc"),
+        "-O", "coff", "-o", str(obj)])
+    sh([gcc, str(REPO / "packaging" / "win-launcher.c"), str(obj),
+        "-o", str(stage / "AVF.exe"), "-municode", "-mwindows", "-s", "-static"])
+    obj.unlink()
+
+
+def fetch_webview2_bootstrapper(stage: Path) -> None:
+    """The WebView2 evergreen bootstrapper (~2 MB), bundled for the installer.
+    (fwlink 2124701 turned out to be the 212 MB standalone — kept out.)
+
+    pywebview renders through WebView2; current Win10/11 have it, older or
+    stripped-down machines do not, and the installer runs this silently when
+    the registry says so. No SHA pin: Microsoft rotates the binary behind the
+    fwlink — the installer only ever runs it from Microsoft's own endpoint.
+    """
+    import urllib.request
+
+    dest = stage / "WebView2Bootstrapper.exe"
+    if dest.exists():
+        return
+    req = urllib.request.Request(
+        WEBVIEW2_BOOTSTRAP_URL,
+        headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+    with urllib.request.urlopen(req, timeout=120) as r, open(dest, "wb") as f:
+        while chunk := r.read(1 << 20):
+            f.write(chunk)
+    if dest.stat().st_size > 5_000_000:
+        dest.unlink()
+        raise SystemExit("WebView2 bootstrapper looks like the standalone "
+                         "installer (too big) — refusing to bundle it")
+    if dest.stat().st_size < 500_000:
+        dest.unlink()
+        raise SystemExit("WebView2 bootstrapper download looks wrong — refusing to bundle it")
+
+
+def _win_header_bmp(path: Path) -> None:
+    """The 150x57 installer-header art: white ground, teal mark, AVF wordmark
+    — the electron-builder look, drawn here so no binary asset is committed."""
+    from PIL import Image, ImageDraw
+
+    W, H = 150, 57
+    img = Image.new("RGB", (W, H), (255, 255, 255))
+    d = ImageDraw.Draw(img)
+    x, y, size = 8, 12, 33
+    d.rounded_rectangle([x, y, x + size, y + size], radius=8, fill=(45, 212, 191))
+    d.polygon([(x + 13, y + 10), (x + 25, y + 16.5), (x + 13, y + 23)],
+              fill=(10, 13, 18))
+    font = None
+    for f in ("/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+              "/System/Library/Fonts/Helvetica.ttc"):
+        try:
+            from PIL import ImageFont
+            font = ImageFont.truetype(f, 15)
+            break
+        except OSError:
+            continue
+    d.text((x + size + 9, y + 8), "AVF", fill=(10, 13, 18), font=font)
+    d.text((x + size + 9, y + 22), "CONSOLE", fill=(45, 212, 191), font=font)
+    img.save(path, "BMP")
+
+
+def win_setup(stage: Path, out: Path) -> Path:
+    """Setup.exe via NSIS (brew install makensis) — the one-click installer
+    ZenPilot ships: progress, "Run AI Video Factory" checked at the end,
+    per-user install, desktop shortcut, uninstaller in Apps & Features."""
+    makensis = shutil.which("makensis")
+    if not makensis:
+        raise SystemExit("makensis is required for the Windows setup — "
+                         "brew install makensis")
+    header = OUT / "win-header.bmp"
+    _win_header_bmp(header)
+    nsi = OUT / "win-setup.gen.nsi"
+    nsi.write_text((REPO / "packaging" / "win-setup.nsi").read_text()
+                   .replace("@STAGE@", str(stage))
+                   .replace("@OUT@", str(out / "avf-windows-x64-setup.exe"))
+                   .replace("@ICO@", str(REPO / "assets" / "icon" / "avf.ico"))
+                   .replace("@HEADER@", str(header))
+                   .replace("@VERSION@", _app_version()))
+    sh([makensis, "-V2", str(nsi)])
+    nsi.unlink()
+    return out / "avf-windows-x64-setup.exe"
+
+
 def _glibc_floor(binary: Path) -> tuple[int, int]:
     """Highest GLIBC_x.y the binary's dynamic symbols ask for, (0,0) if static."""
     found = re.findall(rb"GLIBC_(\d+\.\d+)", binary.read_bytes())
@@ -525,6 +630,12 @@ def build(target: str) -> Path:
     for script in ("desktop.py", "smoke.py"):
         shutil.copy2(REPO / "packaging" / script, content / script)
 
+    if t["launcher"] == "AVF.bat":
+        # a real exe launcher and the WebView2 bootstrapper exist only for
+        # windows; without mingw the .bat stays the launcher
+        compile_win_launcher(launchers)
+        fetch_webview2_bootstrapper(content)
+
     launchers.mkdir(parents=True, exist_ok=True)
     launcher = launchers / t["launcher"]
     launcher.write_text(LAUNCHERS[t["launcher"]].format(py=t["python"]))
@@ -571,6 +682,10 @@ def main() -> int:
         zipped = zip_dir(stage, OUT / f"avf-{target}.zip")
         print(f"  ✓ {zipped.relative_to(REPO)} "
               f"({zipped.stat().st_size / 1e6:.0f} MB)")
+        if TARGETS[target]["launcher"] == "AVF.bat":
+            setup = win_setup(stage, OUT)
+            print(f"  ✓ {setup.relative_to(REPO)} "
+                  f"({setup.stat().st_size / 1e6:.0f} MB)")
         # A convenience wrapper around the .app, not a second artifact: hdiutil is
         # macOS-only, so `all` on another host still ships the bundle in the zip.
         app = TARGETS[target]["app"]
