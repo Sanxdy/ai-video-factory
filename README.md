@@ -16,17 +16,19 @@ upgrade). YouTube OAuth = permanent Production token, auto-upload included.
 
 ---
 
-## 1. Clone & Install
+## 1. Install — one command
 
-**Prerequisites (present on almost every OS):** `git`. If not: `sudo apt install -y git` (Linux) / `brew install git` (Mac).
-
-**One command does everything** (clone + all dependencies + models + web UI):
+**Prerequisites (present on almost every OS):** `git` and `make`. If not:
+`sudo apt install -y git make` (Linux) / `brew install git` (Mac).
 
 ```bash
-git clone https://github.com/Sanxdy/ai-video-factory.git && cd ai-video-factory && ./scripts/bootstrap.sh
+git clone https://github.com/Sanxdy/ai-video-factory.git && cd ai-video-factory && make install
 ```
 
-What `bootstrap.sh` installs automatically:
+`make install` and `./scripts/bootstrap.sh` are the same thing — use whichever
+you prefer. It sets the machine up, asking nothing:
+
+What it installs automatically:
 
 | # | Component | Detail |
 |---|---|---|
@@ -195,32 +197,47 @@ Example: daily at 19:00 WIB (2 videos, auto-approve, upload public):
 | Upload fails | Re-run `avf youtube auth`. If it repeats every ~7 days → the consent screen is still `Testing`; set it to `In production` (see [`packaging/README.md`](packaging/README.md)) |
 | Double subtitles | Do not upload a video that already has subtitles baked in |
 
-## 7. Build the installers (.dmg / .exe / Linux zip)
-
-One script, three targets, **from any one of them** — a macOS machine produces the
-Windows and Linux artifacts too, because the interpreter is a prebuilt
-`python-build-standalone` tarball for the *target* rather than the host's.
+## 7. Build the installers — one command
 
 ```bash
-cd web && npm run build && cd ..     # packaging does NOT build the UI for you
+make build            # → packaging/out/   (needs the venv from `make install`)
+```
+
+That is the whole build. It produces every installer the host can make, and **one
+macOS machine builds all three platforms**: nothing is frozen on the host, because
+the interpreter is a prebuilt `python-build-standalone` tarball for the *target*
+and `uv` resolves that target's wheels.
+
+| Artifact | For | User opens | One-time tool |
+|---|---|---|---|
+| `avf-macos-arm64.dmg` | macOS 14+, Apple Silicon | drag `AVF.app` → Applications | macOS host (`hdiutil`) + `pip install ds_store mac_alias` |
+| `avf-windows-x64-setup.exe` | Windows 10 x64 | `AVF.exe`, after a one-click install | `makensis` + `mingw-w64` — the latter builds the `AVF.exe` the installer's shortcuts point at |
+| `avf-linux-x64.AppImage` | Linux, glibc 2.35+ | `chmod +x avf-linux-x64.AppImage && ./avf-linux-x64.AppImage` | `mksquashfs` — `brew install squashfs` / `apt install squashfs-tools` |
+| `avf-{macos-arm64,windows-x64,linux-x64}.zip` | all three | `AVF.app` / `AVF.exe` / `avf.sh` | — |
+
+The web UI is built for you when `web/out` is missing or stale, every download is
+SHA-256 pinned (a mismatch deletes the file and stops the build), and the only
+thing you must supply is `uv` — `brew install uv` / `pipx install uv`.
+
+Without `make` — on Windows, or any shell — the same build is one command too:
+
+```bash
 python3 packaging/build.py all       # or one target: macos-arm64 | windows-x64 | linux-x64
 ```
 
-Artifacts land in `packaging/out/`:
+A missing `makensis`, `mingw-w64` or `mksquashfs` skips that one artifact and says
+so; it does not fail the run, so a build always finishes with whatever the host can
+produce. The DMG is the exception — `hdiutil` exists only on macOS, so building on
+Linux or Windows simply leaves it out.
 
-| Target | Files | User double-clicks | Extra requirement |
-|---|---|---|---|
-| `macos-arm64` | `avf-macos-arm64.dmg`, `.zip` | `AVF.app` | macOS host (the DMG needs `hdiutil`) + `pip install ds_store mac_alias` to style it |
-| `windows-x64` | `avf-windows-x64-setup.exe`, `.zip` | `AVF.exe` (from the installer) | `makensis` — `brew install makensis` |
-| `linux-x64` | `avf-linux-x64.zip` | `avf.sh` | — |
+**Check a build before shipping it**, from the unpacked bundle root (on macOS,
+`AVF.app/Contents/Resources`) — no API key, no network:
 
-- `uv` is required: `brew install uv` / `pipx install uv`.
-- **There is no AppImage target.** Linux ships as the zip (which carries the
-  bundled `python/` and `vendor/ffmpeg` the app needs beside it); copy the included
-  `avf.desktop` into `~/.local/share/applications/` for a menu entry.
-- No `hdiutil` → the DMG is skipped and the macOS zip still builds. No `makensis`
-  → `build.py` exits non-zero after writing the Windows zip, so run the targets
-  you need individually.
-- macOS floor 14.0 (Apple Silicon), Windows 10 x64, Linux glibc 2.35 (Ubuntu
-  22.04+). The floors, the SHA-256 pinning and the pre-ship `smoke.py` check are
-  documented in [`packaging/README.md`](packaging/README.md).
+```sh
+AVF_DATA_DIR=$(mktemp -d) ./python/bin/python3 smoke.py
+AVF_DATA_DIR=$(mktemp -d) ./python/bin/python3 -m apps.cli doctor
+```
+
+Platform floors: macOS 14.0 (Apple Silicon), Windows 10 x64, Linux glibc 2.35
+(Ubuntu 22.04+ / Debian 12+). The floors, the pinning and what `smoke.py` proves
+are documented in [`packaging/README.md`](packaging/README.md).

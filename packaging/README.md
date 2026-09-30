@@ -126,17 +126,26 @@ re-running it is harmless.
 ## Notes for whoever builds the installer
 
 ```sh
-cd web && npm run build          # packaging does not build the UI for you
-python3 packaging/build.py all   # → packaging/out/avf-{macos-arm64,windows-x64,linux-x64}.zip
+make build                       # → packaging/out/   (or: python3 packaging/build.py all)
 ```
 
-One script, three targets, **from any one of them** — a macOS machine produces the
-Windows and Linux zips too. Nothing is frozen on the host: the interpreter is a
-prebuilt `python-build-standalone` tarball for the *target*, and `uv pip install
+One command, three targets, **from any one of them** — a macOS machine produces the
+Windows and Linux artifacts too. Nothing is frozen on the host: the interpreter is
+a prebuilt `python-build-standalone` tarball for the *target*, and `uv pip install
 --python-platform <target> --only-binary :all:` resolves every wheel for it.
 PyInstaller cannot do this, because it bundles the host interpreter and its
 `.pyd`/`.dylib` files. Every download is SHA-256 pinned; a mismatch deletes the
 file and stops the build.
+
+`build.py` builds the web UI itself when `web/out` is stale. Past `uv`, every
+optional tool adds one artifact and is skipped with a message when it is missing,
+so a build never dies for want of a tool:
+
+| Tool | Artifact it adds |
+|---|---|
+| `makensis` + `mingw-w64` | `avf-windows-x64-setup.exe` — mingw builds the `AVF.exe` the installer's shortcuts point at, so without it the installer is skipped rather than shipped with dangling shortcuts |
+| `mksquashfs` (`brew install squashfs`) | `avf-linux-x64.AppImage` |
+| `hdiutil` + `ds_store`/`mac_alias` | `avf-macos-arm64.dmg` — macOS host only, by nature |
 
 **Check a build before shipping it** — from the unpacked bundle root (on macOS,
 from `AVF.app/Contents/Resources`), no API key and no network needed:
@@ -156,11 +165,12 @@ render used a host ffmpeg instead of the bundled one.
 Unzipping gives one folder per OS. What the user double-clicks differs everywhere;
 `desktop.py` behind it does not.
 
-| OS | Double-click | Notes |
+| OS | Open | Notes |
 |---|---|---|
 | macOS | `AVF.app` | Finder runs `Contents/MacOS/AVF` → `Resources/python/bin/python3`. A real bundle, so it gets a dock icon and a menu bar and opens no Terminal. Unsigned — first launch needs right-click → **Open**. |
-| Windows | `AVF.bat` | `start "" python\pythonw.exe desktop.py`. `pythonw`, not `python`, so no console window appears; a crash is only visible in `runtime/logs/desktop.log`. |
-| Linux | `avf.sh` | `avf.desktop` runs it from wherever the folder was unzipped (`%k`), so nothing is baked in at build time. Copy it into `~/.local/share/applications/` for a menu entry. |
+| Windows | `AVF.exe` | Compiled from `win-launcher.c` by `build.py`; `pythonw.exe` behind it, so no console window appears and a crash is only visible in `runtime/logs/desktop.log`. Without mingw-w64 the zip's `AVF.bat` is the launcher instead, and the setup.exe is skipped so its shortcuts cannot dangle. |
+| Linux | `avf.sh` | `avf.desktop` runs it from wherever the folder was unzipped (`%k`), so nothing is baked in at build time. |
+| Linux | `avf-linux-x64.AppImage` | The same `desktop.py` behind an `AppRun`. Statically linked runtime, so it needs no `libfuse2`; `chmod +x` once. |
 
 Closing the window mid-render asks first, and the job resumes on the next start.
 If `pywebview` cannot import — Linux without `webkit2gtk` — the shell opens the

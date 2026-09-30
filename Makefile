@@ -1,4 +1,24 @@
-.PHONY: test check demo ui rebuild-ui dev dev-scratch
+.PHONY: install build test check demo ui rebuild-ui dev dev-scratch
+
+# ── the two commands that matter ─────────────────────────────────────────────
+# `make install` sets a machine up from a checkout. `make build` produces every
+# installer this host can make: .dmg, setup.exe, AppImage and the zips. Both are
+# thin wrappers — the work lives in scripts/bootstrap.sh and packaging/build.py,
+# which also run without make (Windows has none, and
+# `python3 packaging/build.py all` is the same build there).
+#
+# build wants uv, which is required (brew install uv), plus one optional tool per
+# extra artifact: makensis + mingw-w64 for setup.exe, mksquashfs for the AppImage
+# (brew install makensis mingw-w64 squashfs). A missing optional tool skips its
+# own artifact with a message instead of failing the run.
+install:
+	./scripts/bootstrap.sh
+
+build:
+	@test -x .venv/bin/python || { echo "no .venv — run 'make install' first"; exit 1; }
+	@.venv/bin/python -c 'import ds_store, mac_alias' 2>/dev/null || \
+	  .venv/bin/pip install -q ds_store mac_alias
+	.venv/bin/python packaging/build.py all
 
 test:
 	.venv/bin/python -m pytest tests/ -q

@@ -32,13 +32,24 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      # web/out is gitignored and build.py refuses to run without it, so a stale
-      # bundle shipping the wrong UI is only prevented by building it here.
+      # web/out is gitignored. build.py now builds it itself, but doing it here
+      # keeps npm out of the assembly step's output.
       - name: Build the web UI
         working-directory: web
         run: |
           npm ci
           npm run build
+
+      - name: Installer tooling
+        # makensis builds setup.exe, mingw-w64 builds the AVF.exe that installer's
+        # shortcuts point at, squashfs builds the AppImage, and the two Python
+        # packages style the DMG volume (pillow, which draws the installer header,
+        # is needed by this interpreter too). build.py skips the artifact whose
+        # tool is missing rather than failing, so without these the release would
+        # quietly ship nothing but zips.
+        run: |
+          brew install makensis mingw-w64 squashfs
+          uv pip install --system ds_store mac_alias pillow
 
       - name: Assemble the bundles
         run: python3 packaging/build.py all
@@ -53,7 +64,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: avf-bundles
-          path: packaging/out/*.zip
+          path: |
+            packaging/out/*.zip
+            packaging/out/*.dmg
+            packaging/out/*.AppImage
+            packaging/out/*-setup.exe
           if-no-files-found: error
 
       - name: Publish the release
@@ -64,4 +79,7 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "$GITHUB_REF_NAME" \
             --generate-notes \
-            packaging/out/*.zip
+            packaging/out/*.zip \
+            packaging/out/*.dmg \
+            packaging/out/*.AppImage \
+            packaging/out/*-setup.exe
