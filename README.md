@@ -50,12 +50,20 @@ pip install -e .
 ./scripts/system_check.py        # check the environment
 ```
 
-## 2. Start Server (Web UI)
+## 2. Run
+
+**From a source checkout** (after §1):
 
 ```bash
 source .venv/bin/activate
 avf serve                     # → http://localhost:8600  (host 0.0.0.0:8600)
+make dev                      # dev loop: 127.0.0.1:8610, rebuilds web/out only when stale
 ```
+
+**From an installer** (`.dmg` / `setup.exe` / Linux zip — build them in §7):
+double-click `AVF.app` (macOS) / `AVF.exe` (Windows) / `avf.sh` (Linux). A local
+server boots behind a splash screen and the console opens in a native window. No
+venv, no CLI, no Terminal.
 
 Remote access (VPS / subdomain): reverse-proxy port `8600` to your domain
 (e.g. Nginx/Caddy). The UI contains: dashboard, content queue, settings, YouTube
@@ -186,3 +194,33 @@ Example: daily at 19:00 WIB (2 videos, auto-approve, upload public):
 | Settings API key error "Extra data" | Delete the old key, re-enter it — make sure there are no odd characters |
 | Upload fails | Re-run `avf youtube auth`. If it repeats every ~7 days → the consent screen is still `Testing`; set it to `In production` (see [`packaging/README.md`](packaging/README.md)) |
 | Double subtitles | Do not upload a video that already has subtitles baked in |
+
+## 7. Build the installers (.dmg / .exe / Linux zip)
+
+One script, three targets, **from any one of them** — a macOS machine produces the
+Windows and Linux artifacts too, because the interpreter is a prebuilt
+`python-build-standalone` tarball for the *target* rather than the host's.
+
+```bash
+cd web && npm run build && cd ..     # packaging does NOT build the UI for you
+python3 packaging/build.py all       # or one target: macos-arm64 | windows-x64 | linux-x64
+```
+
+Artifacts land in `packaging/out/`:
+
+| Target | Files | User double-clicks | Extra requirement |
+|---|---|---|---|
+| `macos-arm64` | `avf-macos-arm64.dmg`, `.zip` | `AVF.app` | macOS host (the DMG needs `hdiutil`) + `pip install ds_store mac_alias` to style it |
+| `windows-x64` | `avf-windows-x64-setup.exe`, `.zip` | `AVF.exe` (from the installer) | `makensis` — `brew install makensis` |
+| `linux-x64` | `avf-linux-x64.zip` | `avf.sh` | — |
+
+- `uv` is required: `brew install uv` / `pipx install uv`.
+- **There is no AppImage target.** Linux ships as the zip (which carries the
+  bundled `python/` and `vendor/ffmpeg` the app needs beside it); copy the included
+  `avf.desktop` into `~/.local/share/applications/` for a menu entry.
+- No `hdiutil` → the DMG is skipped and the macOS zip still builds. No `makensis`
+  → `build.py` exits non-zero after writing the Windows zip, so run the targets
+  you need individually.
+- macOS floor 14.0 (Apple Silicon), Windows 10 x64, Linux glibc 2.35 (Ubuntu
+  22.04+). The floors, the SHA-256 pinning and the pre-ship `smoke.py` check are
+  documented in [`packaging/README.md`](packaging/README.md).
