@@ -213,7 +213,7 @@ INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
     <key>CFBundleIdentifier</key><string>dev.avf.console</string>
     <key>CFBundleName</key><string>AVF</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>CFBundleShortVersionString</key><string>{version}</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>LSMinimumSystemVersion</key><string>{min_os}</string>
     <key>NSHighResolutionCapable</key><true/>
@@ -744,7 +744,8 @@ def build(target: str) -> Path:
         # LSMinimumSystemVersion is derived, not restated: it has to match the
         # deployment target the wheels were resolved against.
         (stage / t["app"] / "Contents" / "Info.plist").write_text(
-            INFO_PLIST.format(min_os=t["env"]["MACOSX_DEPLOYMENT_TARGET"]))
+            INFO_PLIST.format(min_os=t["env"]["MACOSX_DEPLOYMENT_TARGET"],
+                              version=_app_version()))
         # CFBundleIconFile resolves against Contents/Resources, not site-packages.
         shutil.copy2(REPO / "assets" / "icon" / "avf.icns",
                      content / "avf.icns")

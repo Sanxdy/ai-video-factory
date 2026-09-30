@@ -49,7 +49,11 @@ jobs:
         # quietly ship nothing but zips.
         run: |
           brew install makensis mingw-w64 squashfs
-          uv pip install --system ds_store mac_alias pillow
+          # Target the same interpreter that runs build.py. --break-system-packages
+          # because the runner's python3 is Homebrew's, which PEP 668 marks
+          # externally managed and would otherwise refuse the install.
+          uv pip install --python "$(command -v python3)" --break-system-packages \
+            ds_store mac_alias pillow
 
       - name: Assemble the bundles
         run: python3 packaging/build.py all
